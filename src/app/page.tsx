@@ -7,7 +7,6 @@ import DishGrid from '@/components/menu/DishGrid';
 import { dishService } from '@/lib/firebase/dishService';
 import { categoryService } from '@/lib/firebase/categoryService';
 import { Dish } from '@/types/menu.types';
-import { ShoppingCart } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
@@ -60,13 +59,15 @@ export default function HomePage() {
     }
   }, []);
 
-  // Guardar carrito en localStorage
+  // Guardar carrito en localStorage + disparar evento para que Navbar se actualice
   useEffect(() => {
     if (cartItems.length > 0) {
       localStorage.setItem('cart', JSON.stringify(cartItems));
     } else {
       localStorage.removeItem('cart');
     }
+    // Notificar al Navbar que el carrito cambió
+    window.dispatchEvent(new Event('cartUpdated'));
   }, [cartItems]);
 
   const handleOrder = async (dish: Dish) => {
@@ -112,19 +113,6 @@ export default function HomePage() {
     }
   };
 
-  const handleCheckout = () => {
-    if (!user) {
-      alert('Por favor, inicia sesión para continuar');
-      router.push('/login');
-      return;
-    }
-    if (cartItems.length === 0) {
-      alert('El carrito está vacío');
-      return;
-    }
-    router.push('/checkout');
-  };
-
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -146,41 +134,19 @@ export default function HomePage() {
             <p className="text-gray-600">Cargando nuestro delicioso menú...</p>
           </div>
         ) : (
-          <>
-            {/* Grid de platos */}
-            <DishGrid
-              dishes={dishes}
-              onOrder={handleOrder}
-              onDelivery={handleDelivery}
-              showAdminActions={(user as any)?.role === 'admin'}
-              onEditDish={handleEditDish}
-              onDeleteDish={handleDeleteDish}
-              emptyMessage={
-                searchQuery
-                  ? 'No hay platos que coincidan con tu búsqueda'
-                  : 'No hay platos disponibles'
-              }
-            />
-
-            {/* Carrito flotante */}
-            {cartItems.length > 0 && (
-              <div className="fixed bottom-6 right-6 z-50">
-                <button
-                  onClick={handleCheckout}
-                  className="flex items-center gap-3 px-6 py-4 bg-chifa-red text-white font-bold rounded-full shadow-2xl hover:bg-red-700 transition-all hover:scale-105"
-                >
-                  <ShoppingCart className="w-6 h-6" />
-                  <div className="text-left">
-                    <div className="text-sm font-medium">Ver Carrito</div>
-                    <div className="text-lg">
-                      {cartItems.reduce((sum, item) => sum + item.quantity, 0)} items •&nbsp;
-                      S/ {cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
-                    </div>
-                  </div>
-                </button>
-              </div>
-            )}
-          </>
+          <DishGrid
+            dishes={dishes}
+            onOrder={handleOrder}
+            onDelivery={handleDelivery}
+            showAdminActions={(user as any)?.role === 'admin'}
+            onEditDish={handleEditDish}
+            onDeleteDish={handleDeleteDish}
+            emptyMessage={
+              searchQuery
+                ? 'No hay platos que coincidan con tu búsqueda'
+                : 'No hay platos disponibles'
+            }
+          />
         )}
       </div>
     </main>
