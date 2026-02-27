@@ -24,3 +24,323 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* ===== AGREGAR A PARTIR DE AQUÍ ===== */
+
+/* 1. Colores personalizados para CHIFA LOS ANGELES */
+@theme inline {
+  /* Colores principales de la marca */
+  --color-red-600: #DC2626;
+  --color-red-700: #B91C1C;
+  --color-yellow-500: #F59E0B;
+  --color-yellow-600: #D97706;
+  
+  /* Asegurar que Tailwind use nuestras fuentes */
+  --font-sans: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  --font-mono: var(--font-geist-mono), monospace;
+}
+
+/* 2. Animaciones para el navbar */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out forwards;
+}
+
+/* 3. Estilos para el scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #DC2626; /* Rojo CHIFA */
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #B91C1C; /* Rojo más oscuro */
+}
+
+/* 4. Mejoras de accesibilidad */
+:focus-visible {
+  outline: 2px solid #F59E0B; /* Amarillo CHIFA */
+  outline-offset: 2px;
+}
+
+/* 5. Asegurar que el body ocupe toda la altura */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* 6. Transiciones suaves para hover */
+.transition-colors {
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
+
+/* 7. Clases utilitarias adicionales */
+.container {
+  width: 100%;
+  margin-right: auto;
+  margin-left: auto;
+  padding-right: 1rem;
+  padding-left: 1rem;
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+/* 8. Asegurar que las imágenes sean responsivas */
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* 9. Estilos para el navbar sticky */
+.sticky {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+}
+
+/* 10. Shadow personalizado para el navbar */
+.shadow-lg {
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+}
+
+/* 11. Backdrop blur para efectos modernos */
+.backdrop-blur-sm {
+  backdrop-filter: blur(8px);
+}
+
+/* 12. Estilos para el menú móvil */
+@media (max-width: 767px) {
+  .mobile-menu-open {
+    display: block;
+  }
+  
+  .mobile-menu-closed {
+    display: none;
+  }
+}
+
+/* 13. Clases para colores específicos de CHIFA */
+.text-chifa-red {
+  color: #DC2626;
+}
+
+.bg-chifa-red {
+  background-color: #DC2626;
+}
+
+.text-chifa-yellow {
+  color: #F59E0B;
+}
+
+.bg-chifa-yellow {
+  background-color: #F59E0B;
+}
+
+.text-chifa-black {
+  color: #171717;
+}
+
+.bg-chifa-black {
+  background-color: #171717;
+}
+
+/* 14. Gradientes con colores CHIFA */
+.bg-gradient-chifa {
+  background: linear-gradient(135deg, #DC2626 0%, #F59E0B 100%);
+}
+
+/* 15. Hover effects específicos */
+.hover\:text-chifa-red:hover {
+  color: #DC2626;
+}
+
+.hover\:bg-chifa-red:hover {
+  background-color: #DC2626;
+}
+
+.hover\:border-chifa-yellow:hover {
+  border-color: #F59E0B;
+}
+
+/* 16. Asegurar que los botones sean accesibles */
+button:focus {
+  outline: 2px solid #F59E0B;
+  outline-offset: 2px;
+}
+
+/* 17. Estilos para el footer (si decides agregarlo más tarde) */
+footer {
+  background-color: #171717;
+  color: white;
+}
+
+/* 18. Padding para evitar que el contenido quede detrás del navbar fijo */
+.main-content {
+  padding-top: 5rem; /* Ajusta según la altura de tu navbar */
+}
+
+/* 19. Clases responsive para mostrar/ocultar elementos */
+.hidden-mobile {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  .hidden-mobile {
+    display: block;
+  }
+  
+  .visible-mobile {
+    display: none;
+  }
+}
+
+/* 20. Smooth scrolling para toda la página */
+html {
+  scroll-behavior: smooth;
+}
+
+/* 21. Mejoras para textos largos */
+p {
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+/* 22. Estilos para enlaces */
+a {
+  color: #DC2626;
+  text-decoration: none;
+}
+
+a:hover {
+  color: #B91C1C;
+  text-decoration: underline;
+}
+
+/* 23. Override para modo oscuro manteniendo colores CHIFA */
+@media (prefers-color-scheme: dark) {
+  .dark\:text-chifa-yellow {
+    color: #F59E0B;
+  }
+  
+  .dark\:bg-chifa-red {
+    background-color: #DC2626;
+  }
+  
+  body {
+    background: #0a0a0a;
+    color: #ededed;
+  }
+  
+  /* Mantener colores de la marca en modo oscuro */
+  .text-chifa-red {
+    color: #DC2626 !important;
+  }
+  
+  .bg-chifa-red {
+    background-color: #DC2626 !important;
+  }
+  
+  .text-chifa-yellow {
+    color: #F59E0B !important;
+  }
+  
+  .bg-chifa-yellow {
+    background-color: #F59E0B !important;
+  }
+}
+
+/* Animación para el punto decorativo */
+@keyframes pulse-slow {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(0.95);
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
+}
+
+/* Mejoras para el navbar degradado */
+.shadow-xl {
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Efectos de backdrop */
+.backdrop-blur-sm {
+  backdrop-filter: blur(8px);
+}
+
+/* Transiciones suaves */
+.transition-all {
+  transition-property: all;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 300ms;
+}
