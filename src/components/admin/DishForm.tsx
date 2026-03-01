@@ -11,6 +11,7 @@ interface DishFormProps {
   onSubmit: (data: Omit<Dish, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  isEditing?: boolean; // ← AGREGAR ESTA LÍNEA
 }
 
 export default function DishForm({
@@ -18,7 +19,8 @@ export default function DishForm({
   categories,
   onSubmit,
   onCancel,
-  isLoading = false
+  isLoading = false,
+  isEditing = false // ← AGREGAR CON VALOR POR DEFECTO
 }: DishFormProps) {
   const [formData, setFormData] = useState({
     name: dish?.name || '',
@@ -181,27 +183,29 @@ export default function DishForm({
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
-      {/* Header del formulario */}
-      <div className="bg-chifa-red text-white p-6">
+      {/* Header del formulario - AHORA USA isEditing */}
+      <div className="bg-[#EC1F25] text-white p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold">
-              {dish ? 'Editar Plato' : 'Agregar Nuevo Plato'}
+              {isEditing ? '✏️ Editar Plato' : '➕ Agregar Nuevo Plato'}
             </h2>
-            <p className="text-red-100">
-              {dish ? 'Modifica la información del plato' : 'Completa todos los campos para agregar un nuevo plato'}
+            <p className="text-white/90">
+              {isEditing 
+                ? 'Modifica la información del plato existente'
+                : 'Completa todos los campos para agregar un nuevo plato al menú'}
             </p>
           </div>
           <button
             onClick={onCancel}
-            className="p-2 hover:bg-red-700 rounded-full transition-colors"
+            className="p-2 hover:bg-[#d41a1f] rounded-full transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
         </div>
       </div>
 
-      {/* Formulario */}
+      {/* Formulario (el resto del código permanece igual) */}
       <form onSubmit={handleSubmit} className="p-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Nombre del plato */}
@@ -214,7 +218,7 @@ export default function DishForm({
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-chifa-red focus:border-transparent ${
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent ${
                 errors.name ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="Ej: Arroz Chaufa Especial"
@@ -237,7 +241,7 @@ export default function DishForm({
               value={formData.description}
               onChange={handleChange}
               rows={3}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-chifa-red focus:border-transparent ${
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent ${
                 errors.description ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="Describe el plato, ingredientes principales, preparación..."
@@ -266,7 +270,7 @@ export default function DishForm({
                 onChange={handleChange}
                 step="0.01"
                 min="0"
-                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-chifa-red focus:border-transparent ${
+                className={`w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent ${
                   errors.price ? 'border-red-500' : 'border-gray-300'
                 }`}
                 placeholder="0.00"
@@ -291,7 +295,7 @@ export default function DishForm({
               value={formData.preparationTime}
               onChange={handleChange}
               min="1"
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-chifa-red focus:border-transparent ${
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent ${
                 errors.preparationTime ? 'border-red-500' : 'border-gray-300'
               }`}
               placeholder="15"
@@ -313,7 +317,7 @@ export default function DishForm({
               name="categoryId"
               value={formData.categoryId}
               onChange={handleChange}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-chifa-red focus:border-transparent ${
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent ${
                 errors.categoryId ? 'border-red-500' : 'border-gray-300'
               }`}
             >
@@ -332,7 +336,7 @@ export default function DishForm({
             )}
           </div>
 
-          {/* Imagen - MODIFICADO para Base64 */}
+          {/* Imagen - SIN CAMBIOS */}
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Imagen del Plato * (máx. 1MB)
@@ -389,7 +393,7 @@ export default function DishForm({
                 className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
                   isUploading ? 'border-blue-300 bg-blue-50' : 
                   imageError ? 'border-red-300 bg-red-50' : 
-                  'border-gray-300 hover:border-chifa-red hover:bg-red-50'
+                  'border-gray-300 hover:border-[#EC1F25] hover:bg-red-50'
                 }`}
                 onClick={() => fileInputRef.current?.click()}
               >
@@ -432,7 +436,7 @@ export default function DishForm({
               name="ingredients"
               value={formData.ingredients}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-chifa-red focus:border-transparent"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent"
               placeholder="Arroz, pollo, cerdo, huevo, cebollín..."
             />
             <p className="mt-1 text-sm text-gray-500">
@@ -449,7 +453,7 @@ export default function DishForm({
               name="isAvailable"
               checked={formData.isAvailable}
               onChange={handleChange}
-              className="w-5 h-5 text-chifa-red rounded focus:ring-chifa-red"
+              className="w-5 h-5 text-[#EC1F25] rounded focus:ring-[#EC1F25]"
             />
             <span className="ml-3 font-medium text-gray-700">Disponible</span>
           </label>
@@ -460,7 +464,7 @@ export default function DishForm({
               name="isVegetarian"
               checked={formData.isVegetarian}
               onChange={handleChange}
-              className="w-5 h-5 text-chifa-red rounded focus:ring-chifa-red"
+              className="w-5 h-5 text-[#EC1F25] rounded focus:ring-[#EC1F25]"
             />
             <span className="ml-3 font-medium text-gray-700">Vegetariano</span>
           </label>
@@ -471,13 +475,13 @@ export default function DishForm({
               name="isSpicy"
               checked={formData.isSpicy}
               onChange={handleChange}
-              className="w-5 h-5 text-chifa-red rounded focus:ring-chifa-red"
+              className="w-5 h-5 text-[#EC1F25] rounded focus:ring-[#EC1F25]"
             />
             <span className="ml-3 font-medium text-gray-700">Picante</span>
           </label>
         </div>
 
-        {/* Botones de acción */}
+        {/* Botones de acción - MODIFICADO para usar isEditing */}
         <div className="flex justify-end gap-4 pt-6 border-t border-gray-200">
           <button
             type="button"
@@ -490,14 +494,26 @@ export default function DishForm({
           <button
             type="submit"
             disabled={isLoading || isUploading}
-            className="px-6 py-3 bg-chifa-red text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-6 py-3 bg-[#EC1F25] text-white font-semibold rounded-lg hover:bg-[#d41a1f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isLoading ? (
               <>
                 <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Guardando...
+                {isEditing ? 'Actualizando...' : 'Guardando...'}
               </>
-            ) : dish ? 'Actualizar Plato' : 'Agregar Plato'}
+            ) : isEditing ? (
+              <>
+
+                <span>✏️</span>
+                Actualizar Plato
+                
+              </>
+            ) : (
+              <>
+                <span>➕</span>
+                Agregar Plato
+              </>
+            )}
           </button>
         </div>
       </form>

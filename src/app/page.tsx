@@ -15,28 +15,43 @@ export default function HomePage() {
 
   const [dishes, setDishes] = useState<Dish[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]); // CAMBIADO a array
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [cartItems, setCartItems] = useState<any[]>([]);
 
-  // Cargar datos desde Firebase
+  // Cargar categorías primero
   useEffect(() => {
-    const loadData = async () => {
+    const loadCategories = async () => {
+      try {
+        const categoriesData = await categoryService.getAllCategories();
+        setCategories(categoriesData);
+      } catch (error) {
+        console.error('Error al cargar categorías:', error);
+      }
+    };
+    loadCategories();
+  }, []);
+
+  // Cargar platos según filtros
+  useEffect(() => {
+    const loadDishes = async () => {
       setIsLoading(true);
       try {
         let dishesData: Dish[] = [];
-        if (selectedCategory) {
-          dishesData = await dishService.filterDishes({ categoryId: selectedCategory });
-        } else if (searchQuery) {
+        
+        if (searchQuery) {
+          // Priorizar búsqueda
           dishesData = await dishService.searchDishes(searchQuery);
+        } else if (selectedCategories.length > 0) {
+          // Filtrar por múltiples categorías
+          dishesData = await dishService.getDishesByCategories(selectedCategories);
         } else {
+          // Todos los platos
           dishesData = await dishService.getAllDishes();
         }
+        
         setDishes(dishesData);
-
-        const categoriesData = await categoryService.getAllCategories();
-        setCategories(categoriesData);
       } catch (error) {
         console.error('Error al cargar datos:', error);
       } finally {
@@ -44,8 +59,8 @@ export default function HomePage() {
       }
     };
 
-    loadData();
-  }, [selectedCategory, searchQuery]);
+    loadDishes();
+  }, [selectedCategories, searchQuery]); // DEPENDENCIAS ACTUALIZADAS
 
   // Cargar carrito desde localStorage
   useEffect(() => {
@@ -59,14 +74,13 @@ export default function HomePage() {
     }
   }, []);
 
-  // Guardar carrito en localStorage + disparar evento para que Navbar se actualice
+  // Guardar carrito en localStorage
   useEffect(() => {
     if (cartItems.length > 0) {
       localStorage.setItem('cart', JSON.stringify(cartItems));
     } else {
       localStorage.removeItem('cart');
     }
-    // Notificar al Navbar que el carrito cambió
     window.dispatchEvent(new Event('cartUpdated'));
   }, [cartItems]);
 
@@ -90,6 +104,7 @@ export default function HomePage() {
 
   const handleDelivery = async (dish: Dish) => {
     await handleOrder(dish);
+    router.push('/checkout');
   };
 
   const handleEditDish = (dish: Dish) => {
@@ -100,12 +115,8 @@ export default function HomePage() {
     if (confirm(`¿Estás seguro de eliminar "${dish.name}"?`)) {
       const success = await dishService.deleteDish(dish.id);
       if (success) {
-        const [dishesData, categoriesData] = await Promise.all([
-          dishService.getAllDishes(),
-          categoryService.getAllCategories(),
-        ]);
+        const dishesData = await dishService.getAllDishes();
         setDishes(dishesData);
-        setCategories(categoriesData);
         alert('✅ Plato eliminado exitosamente');
       } else {
         alert('❌ Error al eliminar el plato');
@@ -117,20 +128,20 @@ export default function HomePage() {
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="max-w-7xl mx-auto px-4 py-8">
 
-        {/* Header: título + buscador + filtro integrado */}
+        {/* Header con filtros */}
         <MenuHeader
           user={user as any}
           onSearch={setSearchQuery}
           dishCount={dishes.length}
           categories={categories}
-          selectedCategory={selectedCategory}
-          onCategoryChange={setSelectedCategory}
+          selectedCategories={selectedCategories} // CAMBIADO
+          onCategoryChange={setSelectedCategories} // CAMBIADO
         />
 
         {/* Loading state */}
         {isLoading ? (
           <div className="py-20 flex flex-col items-center justify-center">
-            <div className="w-16 h-16 border-4 border-chifa-red border-t-transparent rounded-full animate-spin mb-4" />
+            <div className="w-16 h-16 border-4 border-[#EC1F25] border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-gray-600">Cargando nuestro delicioso menú...</p>
           </div>
         ) : (
@@ -144,6 +155,8 @@ export default function HomePage() {
             emptyMessage={
               searchQuery
                 ? 'No hay platos que coincidan con tu búsqueda'
+                : selectedCategories.length > 0
+                ? 'No hay platos en las categorías seleccionadas'
                 : 'No hay platos disponibles'
             }
           />

@@ -92,6 +92,106 @@ export class DishService {
     }
   }
 
+  // NUEVO: Obtener platos por múltiples categorías
+  async getDishesByCategories(categoryIds: string[]): Promise<Dish[]> {
+    try {
+      if (!categoryIds.length) {
+        console.log('📭 No se proporcionaron categorías para filtrar');
+        return [];
+      }
+
+      console.log('🔍 Obteniendo platos por categorías:', categoryIds);
+      
+      // Firestore 'in' soporta hasta 10 categorías por consulta
+      // Si hay más de 10, necesitamos hacer múltiples consultas
+      if (categoryIds.length <= 10) {
+        // Consulta simple con 'in'
+        const q = query(
+          collection(db, DISHES_COLLECTION),
+          where('categoryId', 'in', categoryIds),
+          where('isAvailable', '==', true),
+          orderBy('createdAt', 'desc')
+        );
+        
+        const querySnapshot = await getDocs(q);
+        const dishes: Dish[] = [];
+        
+        querySnapshot.forEach((doc) => {
+          const data = doc.data();
+          dishes.push({
+            id: doc.id,
+            name: data.name || '',
+            description: data.description || '',
+            price: data.price || 0,
+            image: data.image || '',
+            categoryId: data.categoryId || '',
+            categoryName: data.categoryName || '',
+            isAvailable: data.isAvailable ?? true,
+            ingredients: data.ingredients || [],
+            preparationTime: data.preparationTime || 15,
+            isSpicy: data.isSpicy || false,
+            isVegetarian: data.isVegetarian || false,
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate(),
+            orderCount: data.orderCount || 0
+          } as Dish);
+        });
+        
+        console.log(`✅ ${dishes.length} platos encontrados en ${categoryIds.length} categorías`);
+        return dishes;
+      } else {
+        // Si hay más de 10 categorías, dividimos en lotes de 10
+        console.log('📦 Más de 10 categorías, dividiendo en lotes...');
+        const batches: string[][] = [];
+        for (let i = 0; i < categoryIds.length; i += 10) {
+          batches.push(categoryIds.slice(i, i + 10));
+        }
+        
+        let allDishes: Dish[] = [];
+        
+        for (const batch of batches) {
+          const q = query(
+            collection(db, DISHES_COLLECTION),
+            where('categoryId', 'in', batch),
+            where('isAvailable', '==', true),
+            orderBy('createdAt', 'desc')
+          );
+          
+          const querySnapshot = await getDocs(q);
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            allDishes.push({
+              id: doc.id,
+              name: data.name || '',
+              description: data.description || '',
+              price: data.price || 0,
+              image: data.image || '',
+              categoryId: data.categoryId || '',
+              categoryName: data.categoryName || '',
+              isAvailable: data.isAvailable ?? true,
+              ingredients: data.ingredients || [],
+              preparationTime: data.preparationTime || 15,
+              isSpicy: data.isSpicy || false,
+              isVegetarian: data.isVegetarian || false,
+              createdAt: data.createdAt?.toDate() || new Date(),
+              updatedAt: data.updatedAt?.toDate(),
+              orderCount: data.orderCount || 0
+            } as Dish);
+          });
+        }
+        
+        // Eliminar duplicados por si acaso (aunque no debería haber)
+        const uniqueDishes = Array.from(new Map(allDishes.map(dish => [dish.id, dish])).values());
+        
+        console.log(`✅ ${uniqueDishes.length} platos encontrados en ${categoryIds.length} categorías (${batches.length} lotes)`);
+        return uniqueDishes;
+      }
+    } catch (error: any) {
+      console.error('❌ Error al obtener platos por categorías:', error.message);
+      return [];
+    }
+  }
+
   // Agregar nuevo plato
   async addDish(dishData: Omit<Dish, 'id' | 'createdAt' | 'updatedAt'>): Promise<Dish | null> {
     try {
@@ -208,15 +308,43 @@ export class DishService {
     }
   }
 
-  // Obtener platos por categoría
+  // Obtener platos por categoría (una sola categoría)
   async getDishesByCategory(categoryId: string): Promise<Dish[]> {
     try {
       console.log('🔍 Obteniendo platos por categoría:', categoryId);
-      const allDishes = await this.getAllDishes();
-      const results = allDishes.filter(dish => dish.categoryId === categoryId);
+      const q = query(
+        collection(db, DISHES_COLLECTION),
+        where('categoryId', '==', categoryId),
+        where('isAvailable', '==', true),
+        orderBy('createdAt', 'desc')
+      );
       
-      console.log(`✅ ${results.length} platos encontrados en categoría ${categoryId}`);
-      return results;
+      const querySnapshot = await getDocs(q);
+      const dishes: Dish[] = [];
+      
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        dishes.push({
+          id: doc.id,
+          name: data.name || '',
+          description: data.description || '',
+          price: data.price || 0,
+          image: data.image || '',
+          categoryId: data.categoryId || '',
+          categoryName: data.categoryName || '',
+          isAvailable: data.isAvailable ?? true,
+          ingredients: data.ingredients || [],
+          preparationTime: data.preparationTime || 15,
+          isSpicy: data.isSpicy || false,
+          isVegetarian: data.isVegetarian || false,
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate(),
+          orderCount: data.orderCount || 0
+        } as Dish);
+      });
+      
+      console.log(`✅ ${dishes.length} platos encontrados en categoría ${categoryId}`);
+      return dishes;
     } catch (error: any) {
       console.error('❌ Error al obtener platos por categoría:', error.message);
       return [];
@@ -317,7 +445,7 @@ export class DishService {
     }
   }
 
-  // Método NUEVO que faltaba: Obtener platos recomendados
+  // Obtener platos recomendados
   async getRecommendedDishes(limit: number = 4): Promise<Dish[]> {
     try {
       console.log('🔍 Obteniendo platos recomendados');
@@ -346,7 +474,7 @@ export class DishService {
     }
   }
 
-  // Método para obtener categorías de platos (útil para contadores)
+  // Obtener categorías de platos (útil para contadores)
   async getCategoriesFromDishes(): Promise<Array<{id: string, name: string, count: number}>> {
     try {
       const allDishes = await this.getAllDishes();

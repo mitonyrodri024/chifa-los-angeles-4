@@ -108,10 +108,11 @@ export default function Navbar() {
 
   const handleCartClick = () => {
     if (!user) {
-      alert('Por favor, inicia sesión para ver tu carrito');
-      router.push('/login');
+      // Si no hay usuario, redirigir al login
+      router.push('/login?redirect=/checkout');
       return;
     }
+    // Si hay usuario, ir al checkout
     router.push('/checkout');
   };
 
