@@ -12,7 +12,7 @@ export default function CheckoutPage() {
   const { user } = useAuthContext();
 
   const [cartItems, setCartItems] = useState<any[]>([]);
-  const [isLoadingCart, setIsLoadingCart] = useState(true); // ← NUEVO: evita redirección prematura
+  const [isLoadingCart, setIsLoadingCart] = useState(true);
   const [orderType, setOrderType] = useState<'pickup' | 'delivery'>('pickup');
   const [deliveryAddress, setDeliveryAddress] = useState('');
   const [notes, setNotes] = useState('');
@@ -31,17 +31,17 @@ export default function CheckoutPage() {
         console.error('Error al cargar carrito:', error);
       }
     }
-    setIsLoadingCart(false); // ← marcar como cargado
+    setIsLoadingCart(false);
   }, []);
 
-  // Redirigir si no hay usuario
-  useEffect(() => {
-    if (!user) {
-      router.push('/login?redirect=/checkout');
-    }
-  }, [user, router]);
+  // ✅ ELIMINADO: Redirección automática al login
+  // useEffect(() => {
+  //   if (!user) {
+  //     router.push('/login?redirect=/checkout');
+  //   }
+  // }, [user, router]);
 
-  // Redirigir si el carrito está vacío — SOLO después de cargar
+  // Redirigir si el carrito está vacío
   useEffect(() => {
     if (!isLoadingCart && cartItems.length === 0 && !showSuccess) {
       router.push('/');
@@ -118,7 +118,6 @@ export default function CheckoutPage() {
         total: totals.total,
         status: 'pending' as const,
         type: orderType,
-        // Omitir campos si no aplican — Firebase no acepta undefined
         ...(orderType === 'delivery' && { deliveryAddress: deliveryAddress.trim() }),
         ...(notes.trim() && { notes: notes.trim() }),
       };
@@ -179,8 +178,8 @@ export default function CheckoutPage() {
     }
   };
 
-  // Pantalla de carga mientras se lee el carrito
-  if (isLoadingCart || !user) {
+  // ✅ MODIFICADO: Ya no redirige al login, solo muestra loading mientras carga el carrito
+  if (isLoadingCart) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -361,12 +360,10 @@ export default function CheckoutPage() {
                     <div className={`w-12 h-12 rounded-full flex items-center justify-center ${orderType === 'delivery' ? 'bg-chifa-red text-white' : 'bg-gray-100 text-gray-600'}`}>
                       <Truck className="w-6 h-6" />
                     </div>
-
                     <div>
                       <div className="font-bold text-gray-900">Delivery</div>
                       <div className="text-sm text-gray-600">+ S/ 5.00 de envío</div>
                     </div>
-
                   </div>
                 </button>
               </div>
@@ -405,10 +402,20 @@ export default function CheckoutPage() {
                   <h2 className="text-xl font-bold text-gray-900">Resumen del Pedido</h2>
                 </div>
                 <div className="p-6">
+                  {/* ✅ MOSTRAR DATOS DEL USUARIO SOLO SI EXISTE */}
                   <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                     <div className="text-sm text-gray-500 mb-1">Cliente</div>
-                    <div className="font-bold text-gray-900">{user.displayName}</div>
-                    <div className="text-sm text-gray-600">{user.email}</div>
+                    {user ? (
+                      <>
+                        <div className="font-bold text-gray-900">{user.displayName || 'Usuario'}</div>
+                        <div className="text-sm text-gray-600">{user.email || ''}</div>
+                      </>
+                    ) : (
+                      <div className="text-gray-600">
+                        <p>No has iniciado sesión</p>
+                        <p className="text-xs mt-1">Necesitarás iniciar sesión para confirmar el pedido</p>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3 mb-6">

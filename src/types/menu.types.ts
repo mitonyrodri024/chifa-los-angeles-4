@@ -25,6 +25,7 @@ export interface Category {
   icon?: string;
   color?: string;
   order?: number;
+  images?: string[]; // ← NUEVO: Array de imágenes Base64
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -47,7 +47,7 @@ export default function EditDishPage() {
           setDish(dishData);
         } else {
           setError('No se encontró el plato');
-          setTimeout(() => router.push('/'), 2000);
+          setTimeout(() => router.push('/admin/dishes'), 2000);
         }
         
       } catch (error: any) {
@@ -86,14 +86,27 @@ export default function EditDishPage() {
         throw new Error('El precio debe ser mayor a 0');
       }
       
-      // Preparar datos para actualizar
+      // Preparar datos para actualizar - INCLUYENDO image (vacío o existente)
       const dishToUpdate = {
-        ...dishData,
         name: dishData.name.trim(),
         description: dishData.description?.trim() || '',
+        price: Number(dishData.price) || 0,
+        image: dishData.image || '', // ← Mantener imagen existente o string vacío
+        categoryId: dishData.categoryId,
         categoryName: selectedCategory.name,
+        isAvailable: dishData.isAvailable ?? true,
+        isVegetarian: dishData.isVegetarian ?? false,
+        isSpicy: dishData.isSpicy ?? false,
+        preparationTime: Number(dishData.preparationTime) || 15,
+        ingredients: Array.isArray(dishData.ingredients) 
+          ? dishData.ingredients 
+          : (typeof dishData.ingredients === 'string' && dishData.ingredients 
+            ? dishData.ingredients.split(',').map((i: string) => i.trim()).filter((i: string) => i) 
+            : []),
         updatedAt: new Date(),
       };
+      
+      console.log('💾 Actualizando plato:', dishToUpdate);
       
       const success = await dishService.updateDish(dishId, dishToUpdate);
       
@@ -102,7 +115,7 @@ export default function EditDishPage() {
         setShowSuccess(true);
         
         setTimeout(() => {
-          router.push('/');
+          router.push('/admin/dishes');
         }, 2000);
       } else {
         throw new Error('Error al actualizar el plato');
@@ -127,7 +140,7 @@ export default function EditDishPage() {
       
       if (success) {
         console.log('✅ Plato eliminado exitosamente');
-        router.push('/');
+        router.push('/admin/dishes');
       } else {
         throw new Error('Error al eliminar el plato');
       }
@@ -142,7 +155,7 @@ export default function EditDishPage() {
   };
 
   const handleCancel = () => {
-    router.push('/');
+    router.push('/admin/dishes');
   };
 
   // Loading state
@@ -170,7 +183,7 @@ export default function EditDishPage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Error</h2>
               <p className="text-gray-600 mb-6">{error}</p>
               <Link
-                href="/"
+                href="/admin/dishes"
                 className="px-6 py-3 bg-[#EC1F25] text-white font-semibold rounded-lg hover:bg-[#d41a1f] transition-colors inline-flex items-center gap-2"
               >
                 <ArrowLeft className="w-4 h-4" />
@@ -192,7 +205,7 @@ export default function EditDishPage() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                 <Link
-                  href="/"
+                  href="/admin/dishes"
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <ArrowLeft className="w-6 h-6 text-gray-600" />
@@ -224,11 +237,11 @@ export default function EditDishPage() {
 
             {/* Breadcrumbs */}
             <div className="flex items-center gap-2 text-sm text-gray-500">
-              <Link href="/" className="hover:text-[#EC1F25] transition-colors">
-                Inicio
+              <Link href="/admin/dishes" className="hover:text-[#EC1F25] transition-colors">
+                Platos
               </Link>
               <span>›</span>
-              <span className="text-gray-900">Editar Plato</span>
+              <span className="text-gray-900">Editar: {dish?.name}</span>
             </div>
           </div>
 
@@ -242,7 +255,7 @@ export default function EditDishPage() {
                 <div>
                   <h3 className="font-semibold text-green-800">¡Plato actualizado exitosamente!</h3>
                   <p className="text-green-700">
-                    Redirigiendo al menú principal...
+                    Redirigiendo a la lista de platos...
                   </p>
                 </div>
               </div>
@@ -265,7 +278,7 @@ export default function EditDishPage() {
 
           {/* Modal de confirmación eliminar */}
           {showDeleteConfirm && (
-            <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4 animate-fadeIn">
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 animate-fadeIn">
               <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
                 <div className="w-20 h-20 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
                   <AlertCircle className="w-10 h-10 text-red-600" />
@@ -283,14 +296,14 @@ export default function EditDishPage() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDeleteConfirm(false)}
-                    className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all hover:scale-105"
+                    className="flex-1 px-4 py-3 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all"
                     disabled={isDeleting}
                   >
                     Cancelar
                   </button>
                   <button
                     onClick={handleDelete}
-                    className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all hover:scale-105 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                    className="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg transition-all flex items-center justify-center gap-2 shadow-md"
                     disabled={isDeleting}
                   >
                     {isDeleting ? (
@@ -358,7 +371,7 @@ export default function EditDishPage() {
                     <span className="text-blue-600 font-bold text-sm">4</span>
                   </div>
                   <p className="text-gray-600">
-                    <span className="font-semibold text-gray-900">Imagen:</span> Usa fotos atractivas y de buena calidad.
+                    <span className="font-semibold text-gray-900">Categoría:</span> Asegúrate que el plato esté en la categoría correcta.
                   </p>
                 </div>
               </div>

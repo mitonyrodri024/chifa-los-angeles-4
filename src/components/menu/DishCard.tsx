@@ -1,17 +1,19 @@
+// src/components/menu/DishCard.tsx
 'use client';
 
 import { Dish } from '@/types/menu.types';
-import { Utensils, Truck, Clock, Flame, Leaf, Image as ImageIcon } from 'lucide-react';
+import { Utensils, Truck, Clock, Flame, Leaf } from 'lucide-react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation'; // ← Agregar router
+import { useRouter } from 'next/navigation';
 
 interface DishCardProps {
   dish: Dish;
-  onOrder?: () => void; // ← Cambiar a función opcional
-  onDelivery?: () => void; // ← Cambiar a función opcional
+  onOrder?: () => void;
+  onDelivery?: () => void;
   showAdminActions?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
+  hideImage?: boolean;
 }
 
 export default function DishCard({ 
@@ -20,115 +22,71 @@ export default function DishCard({
   onDelivery, 
   showAdminActions = false,
   onEdit,
-  onDelete 
+  onDelete,
+  hideImage = false
 }: DishCardProps) {
   const [imageError, setImageError] = useState(false);
   const router = useRouter();
 
-  // Función para manejar "Pedir Aquí" - SIN VALIDACIÓN DE LOGIN
-  const handleOrderClick = () => {
+  // Función para agregar al carrito (usada por ambos botones)
+  const addToCart = () => {
     if (!dish.isAvailable) return;
     
-    // Si recibimos onOrder como prop, lo usamos
-    if (onOrder) {
-      onOrder();
-      return;
-    }
-    
-    // Comportamiento por defecto: agregar al carrito
     try {
-      // Obtener carrito actual
       const savedCart = localStorage.getItem('cart');
       let cart = savedCart ? JSON.parse(savedCart) : [];
       
-      // Buscar si el plato ya está en el carrito
-      const existingItem = cart.find((item: any) => item.id === dish.id);
+      const existingItem = cart.find((item: any) => item.dishId === dish.id);
       
       if (existingItem) {
-        // Si ya existe, aumentar cantidad
         existingItem.quantity += 1;
       } else {
-        // Si no existe, agregar nuevo item
         cart.push({
-          id: dish.id,
-          name: dish.name,
+          dishId: dish.id,
+          dishName: dish.name,
           price: dish.price,
           quantity: 1,
           image: dish.image
         });
       }
       
-      // Guardar en localStorage
       localStorage.setItem('cart', JSON.stringify(cart));
-      
-      // Disparar evento para actualizar navbar
       window.dispatchEvent(new Event('cartUpdated'));
-      
-      // Mostrar confirmación (opcional)
-      alert(`${dish.name} agregado al carrito`);
+      alert(`✅ "${dish.name}" agregado al carrito`);
       
     } catch (error) {
       console.error('Error al agregar al carrito:', error);
     }
   };
 
-  // Función para manejar "Delivery" - SIN VALIDACIÓN DE LOGIN
+  const handleOrderClick = () => {
+    if (!dish.isAvailable) return;
+    
+    if (onOrder) {
+      onOrder();
+      return;
+    }
+    
+    addToCart(); // Usar la función común
+  };
+
   const handleDeliveryClick = () => {
     if (!dish.isAvailable) return;
     
-    // Si recibimos onDelivery como prop, lo usamos
     if (onDelivery) {
       onDelivery();
       return;
     }
     
-    // Comportamiento por defecto: agregar al carrito y redirigir a checkout
-    handleOrderClick(); // Primero agregamos al carrito
-    router.push('/checkout'); // Luego vamos al checkout
+    addToCart(); // Usar la función común
+    // Opcional: redirigir al checkout después de agregar
+    // router.push('/checkout');
   };
   
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-200 flex flex-col h-full">
-      {/* Imagen del plato */}
-      <div className="relative h-48 overflow-hidden bg-gray-100">
-        <div className="absolute top-3 left-3 z-10">
-          {dish.isVegetarian && (
-            <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-              <Leaf className="w-3 h-3" />
-              Vegetariano
-            </span>
-          )}
-        </div>
-        
-        <div className="absolute top-3 right-3 z-10">
-          {dish.isSpicy && (
-            <span className="bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-              <Flame className="w-3 h-3" />
-              Picante
-            </span>
-          )}
-        </div>
-        
-        <div className="w-full h-full">
-          {dish.image && !imageError ? (
-            <img 
-              src={dish.image}
-              alt={dish.name}
-              className="w-full h-full object-cover"
-              onError={() => setImageError(true)}
-              onLoad={() => console.log('✅ Imagen cargada exitosamente:', dish.name)}
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
-              <div className="text-center">
-                <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">Sin imagen</p>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
+      
+      
       {/* Información del plato */}
       <div className="p-4 flex-grow">
         {/* Categoría */}
@@ -203,7 +161,7 @@ export default function DishCard({
             </button>
           </div>
         ) : (
-          /* Botones para cliente - SIN VALIDACIÓN DE LOGIN */
+          /* Botones para cliente - AMBOS AGREGAN AL CARRITO */
           <div className="flex gap-2">
             <button
               onClick={handleOrderClick}

@@ -1,7 +1,10 @@
+// src/components/menu/MenuHeader.tsx
 'use client';
 
-import { Plus, Tag, Search, X, Filter, ChevronDown } from 'lucide-react';
+import { Plus, Tag, ArrowRight, Image as ImageIcon } from 'lucide-react';
 import { useState } from 'react';
+import Image from 'next/image';
+import DishGrid from './DishGrid';
 
 interface User {
   id: string;
@@ -13,292 +16,103 @@ interface User {
 interface Category {
   id: string;
   name: string;
+  description?: string;
   icon?: string;
   color?: string;
   dishCount: number;
   isActive: boolean;
+  order?: number;
+  images?: string[];
+}
+
+interface Dish {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  image?: string;
+  categoryId: string;
+  isAvailable?: boolean;
+  isVegetarian?: boolean;
+  isSpicy?: boolean;
+  preparationTime?: number;
+  ingredients?: string[];
+  categoryName: string;
+  createdAt?: Date;
+  updatedAt?: Date;
+  orderCount?: number;
 }
 
 interface MenuHeaderProps {
-  title?: string;
-  subtitle?: string;
   user?: User | null;
-  onSearch?: (query: string) => void;
-  showSearch?: boolean;
-  dishCount?: number;
   categories?: Category[];
-  selectedCategories?: string[]; // Array de IDs seleccionados
-  onCategoryChange?: (categoryIds: string[]) => void; // Función que recibe array
+  dishes?: Dish[];
+  onOrder?: (dish: Dish) => void;
+  onDelivery?: (dish: Dish) => void;
+  onPrevCategory?: () => void;
+  onNextCategory?: () => void;
+  currentCategoryIndex?: number;
+  totalCategories?: number;
+  onEditDish?: (dish: Dish) => void;
+  onDeleteDish?: (dish: Dish) => void;
+  showAdminActions?: boolean;
 }
 
 export default function MenuHeader({
-  title = "Nuestro Menú",
-  subtitle = "Descubre la auténtica sazón china",
   user,
-  onSearch,
-  showSearch = true,
-  dishCount = 0,
   categories = [],
-  selectedCategories = [],
-  onCategoryChange
+  dishes = [],
+  onOrder,
+  onDelivery,
+  onPrevCategory,
+  onNextCategory,
+  currentCategoryIndex = 0,
+  totalCategories = 0,
+  onEditDish,
+  onDeleteDish,
+  showAdminActions = false
 }: MenuHeaderProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<string[]>([]);
 
-  const activeCategories = categories ? categories.filter(cat => cat.isActive) : [];
+  // Filtrar solo categorías activas y ordenadas
+  const activeCategories = categories
+    .filter(cat => cat.isActive)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
+
+  // Obtener categoría actual
+  const currentCategory = activeCategories[currentCategoryIndex];
   
-  // Obtener datos de las categorías seleccionadas
-  const selectedCategoriesData = selectedCategories.length > 0 && activeCategories.length > 0
-    ? activeCategories.filter(cat => selectedCategories.includes(cat.id))
+  // ✅ CORREGIDO: Obtener platos de la categoría actual con todas las propiedades necesarias
+  const currentCategoryDishes = currentCategory 
+    ? dishes
+        .filter(dish => dish.categoryId === currentCategory.id && dish.isAvailable !== false)
+        .map(dish => ({
+          id: dish.id,
+          name: dish.name,
+          description: dish.description || '',
+          price: Number(dish.price) || 0,
+          image: dish.image || '',
+          categoryId: dish.categoryId,
+          categoryName: currentCategory.name, // ← Usar el nombre actual
+          isAvailable: dish.isAvailable ?? true,
+          isVegetarian: dish.isVegetarian ?? false,
+          isSpicy: dish.isSpicy ?? false,
+          preparationTime: dish.preparationTime || 15,
+          ingredients: Array.isArray(dish.ingredients) ? dish.ingredients : [],
+          createdAt: dish.createdAt || new Date(),
+          updatedAt: dish.updatedAt,
+          orderCount: dish.orderCount || 0
+        }))
     : [];
 
-  const handleSearch = () => {
-    if (onSearch) {
-      onSearch(searchQuery);
-    }
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      handleSearch();
-    }
-  };
-
-  const clearSearch = () => {
-    setSearchQuery('');
-    if (onSearch) {
-      onSearch('');
-    }
-  };
-
-  // Función para manejar selección múltiple
-  const handleCategoryToggle = (categoryId: string) => {
-    if (!onCategoryChange) return;
-
-    let newSelectedCategories: string[];
-    
-    if (selectedCategories.includes(categoryId)) {
-      // Si ya está seleccionada, la quitamos
-      newSelectedCategories = selectedCategories.filter(id => id !== categoryId);
-    } else {
-      // Si no está seleccionada, la agregamos
-      newSelectedCategories = [...selectedCategories, categoryId];
-    }
-    
-    onCategoryChange(newSelectedCategories);
-  };
-
-  // Limpiar todas las categorías
-  const clearAllCategories = () => {
-    if (onCategoryChange) {
-      onCategoryChange([]);
-    }
-    setIsFilterOpen(false);
-  };
-
-  // Calcular total de platos en categorías seleccionadas
-  const totalDishesInSelected = selectedCategoriesData.reduce((acc, cat) => acc + cat.dishCount, 0);
+  // Obtener imágenes de la categoría (máximo 2)
+  const categoryImages = currentCategory?.images?.slice(0, 2) || [];
 
   return (
     <div className="mb-6 md:mb-10">
-      {/* Header principal */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-4 md:mb-6">
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 md:w-12 md:h-12 rounded-full bg-[#EC1F25] flex items-center justify-center shadow-lg shadow-[#EC1F25]/30">
-              <span className="text-xl md:text-2xl">🍜</span>
-            </div>
-            <h1 className="text-2xl md:text-4xl font-bold text-gray-900">
-              {title}
-            </h1>
-          </div>
-          
-          <p className="text-gray-600 text-base md:text-xl">
-            {subtitle}
-            {dishCount > 0 && (
-              <span className="ml-2 text-[#EC1F25] font-semibold">
-                • {dishCount} {dishCount === 1 ? 'plato' : 'platos'}
-              </span>
-            )}
-          </p>
-        </div>
-
-        {/* Botones administrativos - SOLO para admin (desktop) */}
-        {user?.role === 'admin' && (
-          <div className="hidden md:flex gap-3">
-            <a
-              href="/admin/dishes/add"
-              className="flex items-center gap-2 px-4 py-3 bg-[#F59E0B] hover:bg-[#D97706] text-white font-semibold rounded-xl transition-all hover:scale-105 shadow-md"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Agregar Plato</span>
-            </a>
-            
-            <a
-              href="/admin/categories"
-              className="flex items-center gap-2 px-4 py-3 bg-white hover:bg-gray-50 text-[#EC1F25] font-semibold rounded-xl transition-all hover:scale-105 shadow-md border-2 border-[#EC1F25]"
-            >
-              <Tag className="w-5 h-5" />
-              <span>Categorías</span>
-            </a>
-          </div>
-        )}
-      </div>
-
-      {/* Barra de búsqueda y filtros */}
-      {showSearch && onSearch && (
-        <div className="flex items-center gap-2 md:gap-3">
-          {/* Buscador */}
-          <div className="relative flex-1">
-            <Search className="absolute left-3 md:left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 md:w-5 md:h-5" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Buscar platos..."
-              className="w-full pl-10 md:pl-12 pr-10 md:pr-12 py-3 md:py-3.5 bg-white border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent transition-all shadow-sm hover:shadow-md text-sm md:text-base"
-            />
-            {searchQuery && (
-              <button
-                onClick={clearSearch}
-                className="absolute right-3 md:right-4 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <X className="w-4 h-4 md:w-5 md:h-5" />
-              </button>
-            )}
-          </div>
-
-          {/* Botón de filtros */}
-          {categories && categories.length > 0 && (
-            <div className="relative">
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`flex items-center gap-2 px-3 md:px-5 py-3 md:py-3.5 rounded-xl font-semibold transition-all shadow-sm hover:shadow-md whitespace-nowrap ${
-                  selectedCategories.length > 0
-                    ? 'bg-[#EC1F25] text-white'
-                    : 'bg-white text-gray-700 border-2 border-gray-200 hover:border-[#EC1F25]'
-                }`}
-              >
-                <Filter className="w-4 h-4 md:w-5 md:h-5 flex-shrink-0" />
-                <span className="hidden sm:inline">
-                  {selectedCategories.length > 0 
-                    ? `${selectedCategories.length} categoría${selectedCategories.length > 1 ? 's' : ''}`
-                    : 'Filtros'}
-                </span>
-                {selectedCategories.length > 0 && (
-                  <span className="px-2 py-0.5 bg-white/20 rounded-full text-xs font-bold">
-                    {selectedCategories.length}
-                  </span>
-                )}
-                <ChevronDown className={`w-4 h-4 transition-transform ${isFilterOpen ? 'rotate-180' : ''}`} />
-              </button>
-
-              {/* Dropdown de filtros */}
-              {isFilterOpen && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-40"
-                    onClick={() => setIsFilterOpen(false)}
-                  />
-                  
-                  <div className="absolute right-0 top-full mt-2 w-72 md:w-96 bg-white rounded-2xl shadow-2xl border-2 border-gray-100 z-50 overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-[#EC1F25] text-white p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-white/90 text-sm">{activeCategories.length} categorías disponibles</p>
-                          <p className="text-xs text-white/70 mt-1">
-                            {selectedCategories.length > 0 
-                              ? `${selectedCategories.length} seleccionada${selectedCategories.length > 1 ? 's' : ''}`
-                              : 'Selecciona una o varias categorías'}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setIsFilterOpen(false)}
-                          className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
-                        >
-                          <X className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Lista de categorías */}
-                    <div className="max-h-96 overflow-y-auto p-2">
-                      {activeCategories.map((category) => {
-                        const isSelected = selectedCategories.includes(category.id);
-                        return (
-                          <div
-                            key={category.id}
-                            className="p-2 rounded-xl hover:bg-gray-50 transition-all cursor-pointer"
-                            onClick={() => handleCategoryToggle(category.id)}
-                          >
-                            <div className="flex items-center gap-3">
-                              {/* Checkbox */}
-                              <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
-                                isSelected 
-                                  ? 'bg-[#EC1F25] border-[#EC1F25]' 
-                                  : 'border-gray-300 hover:border-[#EC1F25]'
-                              }`}>
-                                {isSelected && (
-                                  <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                )}
-                              </div>
-                              
-                              {/* Icono */}
-                              <div className={`p-2 rounded-lg ${
-                                isSelected ? 'bg-[#EC1F25]/10' : 'bg-gray-100'
-                              }`}>
-                                <span className="text-xl">{category.icon || '🍽️'}</span>
-                              </div>
-                              
-                              {/* Info */}
-                              <div className="flex-1">
-                                <div className={`font-bold ${
-                                  isSelected ? 'text-[#EC1F25]' : 'text-gray-900'
-                                }`}>
-                                  {category.name}
-                                </div>
-                                <div className="text-sm text-gray-500">
-                                  {category.dishCount} {category.dishCount === 1 ? 'plato' : 'platos'}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Footer */}
-                    <div className="p-3 bg-gray-50 border-t border-gray-200">
-                      <div className="flex gap-2">
-                        <button
-                          onClick={clearAllCategories}
-                          className="flex-1 py-2 text-gray-600 hover:text-gray-800 font-semibold text-sm bg-white rounded-lg border border-gray-200 hover:border-gray-300 transition-colors"
-                        >
-                          Limpiar todo
-                        </button>
-                        <button
-                          onClick={() => setIsFilterOpen(false)}
-                          className="flex-1 py-2 bg-[#EC1F25] hover:bg-[#d41a1f] text-white font-semibold text-sm rounded-lg transition-colors"
-                        >
-                          Aplicar ({selectedCategories.length})
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Botones admin móvil */}
+      {/* Botones admin móvil - SOLO si hay usuario admin */}
       {user?.role === 'admin' && (
-        <div className="md:hidden flex gap-2 mt-4">
+        <div className="md:hidden flex gap-2 mb-6">
           <a
             href="/admin/dishes/add"
             className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-[#F59E0B] hover:bg-[#D97706] text-white font-semibold rounded-xl transition-all active:scale-95 shadow-md"
@@ -317,64 +131,178 @@ export default function MenuHeader({
         </div>
       )}
 
-      {/* Chips de categorías seleccionadas */}
-      {selectedCategoriesData.length > 0 && (
-        <div className="mt-4 bg-white rounded-xl p-4 shadow-sm border border-gray-200">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex items-center gap-2">
-              <Filter className="w-4 h-4 text-[#EC1F25]" />
-              <span className="text-sm font-semibold text-gray-700">
-                Filtros activos ({selectedCategoriesData.length})
+      {/* Navegación de categorías */}
+      {activeCategories.length > 0 && (
+        <>
+          {/* Navegación entre categorías */}
+          <div className="flex items-center justify-between mb-6 bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <button
+              onClick={onPrevCategory}
+              disabled={currentCategoryIndex === 0}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                currentCategoryIndex === 0
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
+              }`}
+            >
+              <ArrowRight className="w-4 h-4 rotate-180" />
+              <span className="hidden sm:inline">Anterior</span>
+            </button>
+
+            <div className="flex items-center gap-3">
+              {/* Barra de progreso */}
+              <div className="flex items-center gap-1">
+                {activeCategories.map((cat, idx) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => {
+                      if (idx < currentCategoryIndex && onPrevCategory) {
+                        for(let i = 0; i < currentCategoryIndex - idx; i++) onPrevCategory();
+                      } else if (idx > currentCategoryIndex && onNextCategory) {
+                        for(let i = 0; i < idx - currentCategoryIndex; i++) onNextCategory();
+                      }
+                    }}
+                    className={`w-2 h-2 rounded-full transition-all ${
+                      idx === currentCategoryIndex 
+                        ? 'w-8 bg-[#EC1F25]' 
+                        : idx < currentCategoryIndex
+                        ? 'bg-[#EC1F25]/30'
+                        : 'bg-gray-300'
+                    }`}
+                    title={cat.name}
+                  />
+                ))}
+              </div>
+              <span className="text-sm text-gray-500 font-medium">
+                {currentCategoryIndex + 1} / {activeCategories.length}
               </span>
             </div>
+
             <button
-              onClick={clearAllCategories}
-              className="text-sm text-[#EC1F25] hover:text-[#d41a1f] font-semibold flex items-center gap-1"
+              onClick={onNextCategory}
+              disabled={currentCategoryIndex === activeCategories.length - 1}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                currentCategoryIndex === activeCategories.length - 1
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-[#EC1F25] text-white hover:bg-[#d41a1f]'
+              }`}
             >
-              <X className="w-3 h-3" />
-              Limpiar todo
+              <span className="hidden sm:inline">Siguiente</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
           </div>
-          
-          <div className="flex flex-wrap gap-2">
-            {selectedCategoriesData.map((category) => (
-              <div
-                key={category.id}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#EC1F25] text-white rounded-full text-sm font-medium shadow-sm"
+
+          {/* Categoría actual con sus platos */}
+          {currentCategory && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
+              
+              {/* Header de categoría - NOMBRE y DESCRIPCIÓN */}
+              <div 
+                className="p-6 border-b border-gray-200"
+                style={{ backgroundColor: `${currentCategory.color || '#EC1F25'}10` }}
               >
-                <span>{category.icon || '🍽️'}</span>
-                <span>{category.name}</span>
-                <button
-                  onClick={() => handleCategoryToggle(category.id)}
-                  className="ml-1 p-0.5 hover:bg-white/20 rounded-full transition-colors"
-                >
-                  <X className="w-3 h-3" />
-                </button>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-4">
+                    <div 
+                      className="w-16 h-16 rounded-full flex items-center justify-center text-3xl shadow-md"
+                      style={{ backgroundColor: currentCategory.color || '#EC1F25' }}
+                    >
+                      <span className="text-white">{currentCategory.icon || '🍽️'}</span>
+                    </div>
+                    <div>
+                      <h1 
+                        className="text-3xl md:text-4xl font-bold"
+                        style={{ color: currentCategory.color || '#EC1F25' }}
+                      >
+                        {currentCategory.name}
+                      </h1>
+                      {currentCategory.description && (
+                        <p className="text-gray-600 mt-2 text-lg">
+                          {currentCategory.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500">Platos disponibles</div>
+                    <div className="text-3xl font-bold text-gray-900">
+                      {currentCategoryDishes.length}
+                    </div>
+                  </div>
+                </div>
               </div>
-            ))}
-            
-            <div className="inline-flex items-center px-3 py-1.5 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
-              <span>{totalDishesInSelected} {totalDishesInSelected === 1 ? 'plato' : 'platos'}</span>
+
+              {/* SECCIÓN DE IMÁGENES DE LA CATEGORÍA - 2 IMÁGENES */}
+              {categoryImages.length > 0 && (
+                <div className="p-6 border-b border-gray-200 bg-gray-50">
+                  <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
+                    <ImageIcon className="w-5 h-5 text-gray-600" />
+                    Galería de {currentCategory.name}
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {categoryImages.map((img, index) => (
+                      <div 
+                        key={index}
+                        className="relative rounded-xl overflow-hidden shadow-lg group"
+                        style={{ height: '280px' }}
+                      >
+                        <Image
+                          src={img}
+                          alt={`${currentCategory.name} - imagen ${index + 1}`}
+                          fill
+                          className="object-cover group-hover:scale-105 transition-transform duration-500"
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                          priority={index === 0}
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* SECCIÓN DE PLATOS - GRID DE 4 COLUMNAS EN PANTALLAS GRANDES */}
+              <div className="p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                  Nuestros Platos
+                </h2>
+                
+                {/* ✅ AHORA SÍ FUNCIONA porque los platos tienen todas las propiedades */}
+                <DishGrid
+                  dishes={currentCategoryDishes}
+                  onOrder={onOrder || (() => {})}
+                  onDelivery={onDelivery || (() => {})}
+                  showAdminActions={showAdminActions}
+                  onEditDish={onEditDish}
+                  onDeleteDish={onDeleteDish}
+                  emptyMessage={`No hay platos disponibles en ${currentCategory.name}`}
+                  hideImages={false}
+                />
+              </div>
             </div>
-          </div>
-        </div>
+          )}
+
+          {/* Mensaje de platos */}
+          {currentCategoryDishes.length > 0 && (
+            <div className="text-center mt-4 text-sm text-gray-500">
+              Mostrando {currentCategoryDishes.length} {currentCategoryDishes.length === 1 ? 'plato' : 'platos'} de {currentCategory.name}
+            </div>
+          )}
+        </>
       )}
 
-      {/* Indicador de búsqueda */}
-      {searchQuery && (
-        <div className="mt-3 flex items-center justify-between p-3 bg-blue-50 border-l-4 border-blue-500 rounded-lg">
-          <div className="flex items-center gap-2">
-            <Search className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-medium text-blue-900">
-              Buscando: <span className="font-bold">"{searchQuery}"</span>
-            </span>
+      {/* Mensaje si no hay categorías activas */}
+      {activeCategories.length === 0 && (
+        <div className="text-center py-12 bg-white rounded-xl shadow border border-gray-200">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+            <span className="text-2xl">📂</span>
           </div>
-          <button
-            onClick={clearSearch}
-            className="text-blue-600 hover:text-blue-800 text-sm font-semibold"
-          >
-            Limpiar
-          </button>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            No hay categorías disponibles
+          </h3>
+          <p className="text-gray-600">
+            Pronto tendremos nuevas categorías en nuestro menú.
+          </p>
         </div>
       )}
     </div>

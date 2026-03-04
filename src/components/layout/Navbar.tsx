@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ShoppingCart, User, Phone, MapPin, Clock, ChevronDown, LogOut, Plus, Tag } from 'lucide-react';
+import { ShoppingCart, User, Phone, MapPin, Clock, ChevronDown, LogOut, Plus, Tag, Utensils } from 'lucide-react';
 import { useAuthContext } from '@/lib/contexts/AuthContext';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useRouter } from 'next/navigation';
@@ -106,13 +106,8 @@ export default function Navbar() {
     }
   };
 
+  // ✅ CARRITO: Ahora va directamente al checkout sin pedir login
   const handleCartClick = () => {
-    if (!user) {
-      // Si no hay usuario, redirigir al login
-      router.push('/login?redirect=/checkout');
-      return;
-    }
-    // Si hay usuario, ir al checkout
     router.push('/checkout');
   };
 
@@ -245,6 +240,14 @@ export default function Navbar() {
             {(user as any)?.role === 'admin' && (
               <div className="hidden md:flex items-center gap-3 mr-4">
                 <Link
+                  href="/admin/dishes"
+                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#3B82F6] hover:bg-blue-600 text-white font-semibold transition-all hover:scale-105 shadow-md hover:shadow-lg"
+                >
+                  <Utensils className="w-4 h-4" />
+                  <span className="hidden lg:inline">Gestionar Platos</span>
+                  <span className="lg:hidden">Platos</span>
+                </Link>
+                <Link
                   href="/admin/dishes/add"
                   className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[#F59E0B] hover:bg-yellow-600 text-white font-semibold transition-all hover:scale-105 shadow-md hover:shadow-lg"
                 >
@@ -266,7 +269,7 @@ export default function Navbar() {
             {/* Acciones: Carrito + Usuario */}
             <div className="flex items-center gap-4">
 
-              {/* 🛒 Carrito real */}
+              {/* 🛒 Carrito - AHORA SIN LOGIN */}
               <CartButton />
 
               {/* Usuario */}
@@ -371,7 +374,7 @@ export default function Navbar() {
                         Mis Pedidos
                       </Link>
 
-                      {/* Panel admin */}
+                      {/* Panel admin - MEJORADO CON MÁS OPCIONES */}
                       {(user as any)?.role === 'admin' && (
                         <div className="mt-2 pt-2 border-t border-gray-100">
                           <div className="px-3 py-1 mb-2">
@@ -379,20 +382,42 @@ export default function Navbar() {
                               🚀 Panel Administrativo
                             </span>
                           </div>
+                          
+                          {/* Dashboard */}
                           <Link href="/admin/dashboard" onClick={() => setIsUserMenuOpen(false)}
                             className="flex items-center gap-3 px-3 py-2 rounded hover:bg-purple-50 text-purple-700 transition-colors mb-1">
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
                             </svg>
-                            Dashboard Admin
+                            Dashboard
                           </Link>
+
+                          {/* GESTIÓN DE PLATOS - SECCIÓN PRINCIPAL */}
+                          <Link href="/admin/dishes" onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2 rounded bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors mb-1 font-medium">
+                            <Utensils className="w-4 h-4" /> 
+                            <span>Gestionar Platos</span>
+                            <span className="ml-auto text-xs bg-blue-200 text-blue-800 px-1.5 py-0.5 rounded">Ver todos</span>
+                          </Link>
+                          
                           <Link href="/admin/dishes/add" onClick={() => setIsUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-yellow-50 text-yellow-700 transition-colors mb-1">
-                            <Plus className="w-4 h-4" /> Agregar Plato
+                            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-yellow-50 text-yellow-700 transition-colors mb-1 ml-4 text-sm">
+                            <Plus className="w-3.5 h-3.5" /> Agregar Nuevo Plato
                           </Link>
+                          
+                          {/* Categorías */}
                           <Link href="/admin/categories" onClick={() => setIsUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-red-50 text-red-700 transition-colors">
+                            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-red-50 text-red-700 transition-colors mb-1 mt-2">
                             <Tag className="w-4 h-4" /> Gestionar Categorías
+                          </Link>
+                          
+                          {/* Pedidos (opcional) */}
+                          <Link href="/admin/orders" onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-green-50 text-green-700 transition-colors">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                            Pedidos
                           </Link>
                         </div>
                       )}

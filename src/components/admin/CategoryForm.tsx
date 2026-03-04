@@ -2,48 +2,172 @@
 'use client';
 
 import { Category } from '@/types/menu.types';
-import { useState } from 'react';
-import { X, Palette, AlertCircle } from 'lucide-react';
-
-// Define el tipo para los datos del formulario
-type CategoryFormData = Omit<Category, 'id' | 'dishCount' | 'createdAt' | 'updatedAt'>;
+import { useState, useRef } from 'react';
+import { X, Upload, AlertCircle, Loader2, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import Image from 'next/image';
 
 interface CategoryFormProps {
   category?: Category | null;
-  onSubmit: (data: CategoryFormData) => void;
+  onSubmit: (data: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'dishCount'>) => void;
   onCancel: () => void;
   isLoading?: boolean;
+  isEditing?: boolean;
+  
 }
-
-const COLORS = [
-  { name: 'Rojo Chifa', value: '#DC2626' },
-  { name: 'Amarillo Chifa', value: '#F59E0B' },
-  { name: 'Azul', value: '#3B82F6' },
-  { name: 'Verde', value: '#10B981' },
-  { name: 'Morado', value: '#8B5CF6' },
-  { name: 'Rosa', value: '#EC4899' },
-  { name: 'Cian', value: '#06B6D4' },
-  { name: 'Gris', value: '#6B7280' },
-];
-
-const ICONS = ['🍚', '🍜', '🥟', '🥣', '👨‍🍳', '🥤', '🥢', '🍲', '🥡', '🍤'];
 
 export default function CategoryForm({
   category,
   onSubmit,
   onCancel,
-  isLoading = false
+  isLoading = false,
+  isEditing = false
 }: CategoryFormProps) {
   const [formData, setFormData] = useState({
     name: category?.name || '',
     description: category?.description || '',
     isActive: category?.isActive ?? true,
-    icon: category?.icon || '🍽️',
-    color: category?.color || '#DC2626',
-    order: category?.order || 1
+    icon: category?.icon || '',
+    color: category?.color || '#EC1F25',
+    order: category?.order || 0,
+    images: category?.images || [] // Array de imágenes (Base64 strings)
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [imageErrors, setImageErrors] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Colores predefinidos para categorías
+  const colorOptions = [
+    { value: '#EC1F25', label: 'Rojo' },
+    { value: '#F59E0B', label: 'Naranja' },
+    { value: '#10B981', label: 'Verde' },
+    { value: '#3B82F6', label: 'Azul' },
+    { value: '#8B5CF6', label: 'Púrpura' },
+    { value: '#EC4899', label: 'Rosa' },
+    { value: '#6B7280', label: 'Gris' },
+    { value: '#1F2937', label: 'Oscuro' },
+  ];
+
+  // Iconos predefinidos
+  const iconOptions = [
+    { value: '🍜', label: 'Fideos' },
+    { value: '🍚', label: 'Arroz' },
+    { value: '🥟', label: 'Dim Sum' },
+    { value: '🥘', label: 'Olla' },
+    { value: '🍗', label: 'Pollo' },
+    { value: '🥩', label: 'Carne' },
+    { value: '🐟', label: 'Pescado' },
+    { value: '🥬', label: 'Vegetales' },
+    { value: '🍲', label: 'Sopa' },
+    { value: '🥡', label: 'Take Away' },
+  ];
+
+  // Manejar subida de múltiples imágenes
+  const handleImagesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploading(true);
+    const newErrors: string[] = [];
+    const validImages: string[] = [];
+
+    // Procesar cada archivo
+    Array.from(files).forEach((file, index) => {
+      // Validar tamaño (1MB máximo por imagen)
+      if (file.size > 1024 * 1024) {
+        newErrors.push(`Imagen ${index + 1}: debe ser menor a 1MB`);
+        return;
+      }
+
+      // Validar tipo
+      const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+      if (!validTypes.includes(file.type)) {
+        newErrors.push(`Imagen ${index + 1}: formato no válido. Use JPG, PNG o WebP`);
+        return;
+      }
+
+      const reader = new FileReader();
+      
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        validImages.push(base64);
+        
+        // Si es la última imagen, actualizar el estado
+        if (validImages.length + formData.images.length === files.length + formData.images.length) {
+          setFormData(prev => ({
+            ...prev,
+            images: [...prev.images, ...validImages]
+          }));
+          setImageErrors(newErrors);
+          setIsUploading(false);
+        }
+      };
+
+      reader.onerror = () => {
+        newErrors.push(`Imagen ${index + 1}: error al leer el archivo`);
+        if (newErrors.length === files.length) {
+          setImageErrors(newErrors);
+          setIsUploading(false);
+        }
+      };
+
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Eliminar una imagen específica
+  const removeImage = (indexToRemove: number) => {
+    setFormData(prev => ({
+      ...prev,
+      images: prev.images.filter((_, index) => index !== indexToRemove)
+    }));
+    
+    // Ajustar el índice actual si es necesario
+    if (currentImageIndex >= formData.images.length - 1) {
+      setCurrentImageIndex(Math.max(0, formData.images.length - 2));
+    }
+  };
+
+  // Reordenar imágenes (mover hacia arriba)
+  const moveImageUp = (index: number) => {
+    if (index === 0) return;
+    const newImages = [...formData.images];
+    [newImages[index - 1], newImages[index]] = [newImages[index], newImages[index - 1]];
+    setFormData(prev => ({ ...prev, images: newImages }));
+    setCurrentImageIndex(index - 1);
+  };
+
+  // Reordenar imágenes (mover hacia abajo)
+  const moveImageDown = (index: number) => {
+    if (index === formData.images.length - 1) return;
+    const newImages = [...formData.images];
+    [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
+    setFormData(prev => ({ ...prev, images: newImages }));
+    setCurrentImageIndex(index + 1);
+  };
+
+  // Arrastrar y soltar para múltiples imágenes
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    
+    if (files && files.length > 0) {
+      // Simular input file change con múltiples archivos
+      const dataTransfer = new DataTransfer();
+      Array.from(files).forEach(file => dataTransfer.items.add(file));
+      if (fileInputRef.current) {
+        fileInputRef.current.files = dataTransfer.files;
+        const event = new Event('change', { bubbles: true });
+        fileInputRef.current.dispatchEvent(event);
+      }
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -51,8 +175,6 @@ export default function CategoryForm({
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
       setFormData(prev => ({ ...prev, [name]: checked }));
-    } else if (name === 'order') {
-      setFormData(prev => ({ ...prev, [name]: parseInt(value) || 1 }));
     } else {
       setFormData(prev => ({ ...prev, [name]: value }));
     }
@@ -69,8 +191,9 @@ export default function CategoryForm({
       newErrors.name = 'El nombre es requerido';
     }
 
-    if (formData.order <= 0) {
-      newErrors.order = 'El orden debe ser mayor a 0';
+    // La imagen ya no es obligatoria, pero si hay imágenes, están bien
+    if (formData.images.length > 0) {
+      // Validar que las imágenes sean válidas (ya se validaron al subir)
     }
 
     setErrors(newErrors);
@@ -81,39 +204,54 @@ export default function CategoryForm({
     e.preventDefault();
     
     if (!validateForm()) {
+      const firstError = Object.keys(errors)[0];
+      if (firstError) {
+        const element = document.querySelector(`[name="${firstError}"]`);
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
-    // Crear los datos del formulario con el tipo correcto
-    const categoryData: CategoryFormData = {
+    const categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'dishCount'> = {
       name: formData.name.trim(),
-      description: formData.description.trim(),
+      description: formData.description.trim() || undefined,
       isActive: formData.isActive,
-      icon: formData.icon,
+      icon: formData.icon || undefined,
       color: formData.color,
-      order: formData.order
+      order: formData.order,
+      images: formData.images // Array de imágenes Base64
     };
 
     onSubmit(categoryData);
   };
 
+  // Función para obtener el tamaño total de las imágenes
+  const getTotalImagesSize = () => {
+    return formData.images.reduce((total, img) => {
+      const base64WithoutPrefix = img.split(',')[1] || img;
+      return total + Math.round((base64WithoutPrefix.length * 3) / 4 / 1024);
+    }, 0);
+  };
+
   return (
-    <div className="max-w-2xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
+    <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
       {/* Header del formulario */}
-      <div className="bg-red-600 from-chifa-red to-red-600 text-white p-6">
+      <div className="bg-[#EC1F25] text-white p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold">
-              {category ? 'Editar Categoría' : 'Nueva Categoría'}
+              {isEditing ? '✏️ Editar Categoría' : '➕ Agregar Nueva Categoría'}
             </h2>
-            <p className="text-red-100">
-              {category ? 'Modifica la información de la categoría' : 'Organiza tu menú con categorías'}
+            <p className="text-white/90">
+              {isEditing 
+                ? 'Modifica la información de la categoría'
+                : 'Completa los campos para agregar una nueva categoría'}
             </p>
           </div>
           <button
-            onClick={onCancel}
-            className="p-2 hover:bg-red-700 rounded-full transition-colors"
             type="button"
+            onClick={onCancel}
+            className="p-2 hover:bg-[#d41a1f] rounded-full transition-colors"
           >
             <X className="w-6 h-6" />
           </button>
@@ -133,11 +271,10 @@ export default function CategoryForm({
               name="name"
               value={formData.name}
               onChange={handleChange}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-chifa-red focus:border-transparent ${
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent ${
                 errors.name ? 'border-red-500' : 'border-gray-300'
               }`}
-              placeholder="Ej: Chaufas, Entradas, Especialidades"
-              disabled={isLoading}
+              placeholder="Ej: Sopas, Arroces, Tallarines..."
             />
             {errors.name && (
               <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
@@ -156,229 +293,328 @@ export default function CategoryForm({
               name="description"
               value={formData.description}
               onChange={handleChange}
-              rows={2}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-chifa-red focus:border-transparent"
-              placeholder="Describe brevemente esta categoría"
-              disabled={isLoading}
+              rows={3}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent"
+              placeholder="Describe brevemente esta categoría..."
             />
           </div>
 
-          {/* Icono y Color */}
+          {/* SECCIÓN DE MÚLTIPLES IMÁGENES */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Imágenes de la Categoría 
+              <span className="text-xs text-gray-500 ml-2">
+                (Máx. 5 imágenes • 1MB cada una • JPG, PNG, WebP)
+              </span>
+            </label>
+            
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImagesChange}
+              accept="image/jpeg,image/jpg,image/png,image/webp"
+              multiple
+              className="hidden"
+              id="images-upload"
+              disabled={formData.images.length >= 5}
+            />
+            
+            {/* Grid de imágenes */}
+            {formData.images.length > 0 && (
+              <div className="mb-4">
+                {/* Visor principal */}
+                <div className="relative bg-gray-100 rounded-lg overflow-hidden mb-4" style={{ height: '300px' }}>
+                  {formData.images[currentImageIndex] && (
+                    <Image
+                      src={formData.images[currentImageIndex]}
+                      alt={`Imagen ${currentImageIndex + 1} de ${formData.name}`}
+                      fill
+                      className="object-contain"
+                    />
+                  )}
+                  
+                  {/* Controles de navegación */}
+                  {formData.images.length > 1 && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentImageIndex(prev => Math.max(0, prev - 1))}
+                        disabled={currentImageIndex === 0}
+                        className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentImageIndex(prev => Math.min(formData.images.length - 1, prev + 1))}
+                        disabled={currentImageIndex === formData.images.length - 1}
+                        className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                    </>
+                  )}
+                  
+                  {/* Contador de imágenes */}
+                  <div className="absolute bottom-2 right-2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
+                    {currentImageIndex + 1} / {formData.images.length}
+                  </div>
+                </div>
+
+                {/* Miniaturas */}
+                <div className="grid grid-cols-5 gap-2 mb-4">
+                  {formData.images.map((img, index) => (
+                    <div
+                      key={index}
+                      className={`relative group cursor-pointer ${
+                        index === currentImageIndex ? 'ring-2 ring-[#EC1F25]' : ''
+                      }`}
+                      onClick={() => setCurrentImageIndex(index)}
+                    >
+                      <div className="relative h-16 bg-gray-100 rounded overflow-hidden">
+                        <Image
+                          src={img}
+                          alt={`Miniatura ${index + 1}`}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      
+                      {/* Botones de control sobre la miniatura */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveImageUp(index);
+                          }}
+                          disabled={index === 0}
+                          className="p-1 bg-white rounded-full hover:bg-gray-100 disabled:opacity-30"
+                          title="Mover izquierda"
+                        >
+                          <ChevronLeft className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            moveImageDown(index);
+                          }}
+                          disabled={index === formData.images.length - 1}
+                          className="p-1 bg-white rounded-full hover:bg-gray-100 disabled:opacity-30"
+                          title="Mover derecha"
+                        >
+                          <ChevronRight className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            removeImage(index);
+                          }}
+                          className="p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
+                          title="Eliminar"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Información de imágenes */}
+                <div className="flex justify-between items-center text-sm text-gray-600 mb-4">
+                  <span>{formData.images.length} imagen(es) seleccionada(s)</span>
+                  <span>Tamaño total: {getTotalImagesSize()} KB</span>
+                </div>
+              </div>
+            )}
+
+            {/* Área de upload */}
+            {formData.images.length < 5 && (
+              <div
+                onDrop={handleDrop}
+                onDragOver={handleDragOver}
+                onClick={() => fileInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all ${
+                  isUploading 
+                    ? 'border-blue-300 bg-blue-50' 
+                    : imageErrors.length > 0
+                      ? 'border-red-300 bg-red-50 hover:bg-red-100'
+                      : 'border-gray-300 hover:border-[#EC1F25] hover:bg-red-50'
+                }`}
+              >
+                {isUploading ? (
+                  <div className="flex flex-col items-center">
+                    <Loader2 className="w-12 h-12 text-blue-500 animate-spin mb-3" />
+                    <p className="text-blue-600 font-medium">Procesando imágenes...</p>
+                  </div>
+                ) : (
+                  <>
+                    <Upload className={`w-16 h-16 mx-auto mb-4 ${
+                      imageErrors.length > 0 ? 'text-red-400' : 'text-gray-400'
+                    }`} />
+                    <p className="text-lg font-medium text-gray-700 mb-2">
+                      {formData.images.length === 0 
+                        ? 'Subir imágenes de la categoría'
+                        : 'Agregar más imágenes'}
+                    </p>
+                    <p className="text-gray-500 text-sm mb-3">
+                      Arrastra y suelta imágenes aquí o haz clic para seleccionar
+                    </p>
+                    <p className="text-gray-500 text-sm">
+                      Puedes seleccionar múltiples imágenes a la vez
+                    </p>
+                    <div className="flex justify-center gap-2 mt-3">
+                      <span className="px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">JPG</span>
+                      <span className="px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">PNG</span>
+                      <span className="px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">WebP</span>
+                      <span className="px-2 py-1 bg-gray-100 rounded-md text-xs text-gray-600">Máx 1MB c/u</span>
+                    </div>
+                    
+                    {/* Errores de imagen */}
+                    {imageErrors.length > 0 && (
+                      <div className="mt-4 text-left">
+                        {imageErrors.map((error, idx) => (
+                          <p key={idx} className="text-sm text-red-600 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                            {error}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Icono y Color en grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Icono */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Icono
               </label>
-              <div className="grid grid-cols-5 gap-2">
-                {ICONS.map((icon) => (
-                  <button
-                    key={icon}
-                    type="button"
-                    onClick={() => setFormData(prev => ({ ...prev, icon }))}
-                    className={`p-3 text-2xl rounded-lg border-2 transition-all ${
-                      formData.icon === icon
-                        ? 'border-chifa-red bg-red-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                    disabled={isLoading}
-                  >
-                    {icon}
-                  </button>
+              <select
+                name="icon"
+                value={formData.icon}
+                onChange={handleChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent"
+              >
+                <option value="">Sin icono</option>
+                {iconOptions.map(icon => (
+                  <option key={icon.value} value={icon.value}>
+                    {icon.value} - {icon.label}
+                  </option>
                 ))}
-              </div>
-              <div className="mt-4 flex items-center justify-center gap-3">
-                <div className="text-4xl">{formData.icon}</div>
-                <input
-                  type="text"
-                  value={formData.icon}
-                  onChange={(e) => setFormData(prev => ({ ...prev, icon: e.target.value }))}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-center"
-                  maxLength={2}
-                  placeholder="Emoji"
-                  disabled={isLoading}
-                />
-              </div>
+              </select>
+              {formData.icon && (
+                <div className="mt-2 text-center text-4xl">
+                  {formData.icon}
+                </div>
+              )}
             </div>
 
             {/* Color */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Color
               </label>
-              <div className="grid grid-cols-4 gap-2">
-                {COLORS.map((color) => (
+              <div className="flex gap-2 flex-wrap">
+                {colorOptions.map(color => (
                   <button
                     key={color.value}
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, color: color.value }))}
-                    className={`h-10 rounded-lg border-2 transition-all flex items-center justify-center ${
-                      formData.color === color.value
-                        ? 'border-gray-900 scale-110'
-                        : 'border-gray-200 hover:scale-105'
+                    className={`w-10 h-10 rounded-full border-2 transition-all ${
+                      formData.color === color.value 
+                        ? 'border-gray-800 scale-110' 
+                        : 'border-transparent hover:scale-105'
                     }`}
                     style={{ backgroundColor: color.value }}
-                    title={color.name}
-                    disabled={isLoading}
-                  >
-                    {formData.color === color.value && (
-                      <span className="text-white text-xs">✓</span>
-                    )}
-                  </button>
+                    title={color.label}
+                  />
                 ))}
               </div>
-              <div className="mt-4 flex items-center gap-3">
-                <Palette className="w-5 h-5 text-gray-400" />
-                <input
-                  type="color"
-                  value={formData.color}
-                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                  className="w-12 h-12 cursor-pointer"
-                  disabled={isLoading}
-                />
-                <input
-                  type="text"
-                  value={formData.color}
-                  onChange={(e) => setFormData(prev => ({ ...prev, color: e.target.value }))}
-                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm"
-                  placeholder="#DC2626"
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Orden y Estado */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Orden */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Orden de Visualización *
-              </label>
               <input
-                type="number"
-                name="order"
-                value={formData.order}
+                type="text"
+                name="color"
+                value={formData.color}
                 onChange={handleChange}
-                min="1"
-                className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-chifa-red focus:border-transparent ${
-                  errors.order ? 'border-red-500' : 'border-gray-300'
-                }`}
-                placeholder="1"
-                disabled={isLoading}
+                className="mt-2 w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent"
+                placeholder="#EC1F25"
               />
-              {errors.order && (
-                <p className="mt-1 text-sm text-red-600 flex items-center gap-1">
-                  <AlertCircle className="w-4 h-4" />
-                  {errors.order}
-                </p>
-              )}
-              <p className="mt-1 text-sm text-gray-500">
-                Número menor = aparece primero
-              </p>
-            </div>
-
-            {/* Estado */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Estado
-              </label>
-              <div className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="relative">
-                    <input
-                      type="checkbox"
-                      name="isActive"
-                      checked={formData.isActive}
-                      onChange={handleChange}
-                      className="sr-only"
-                      id="isActive"
-                      disabled={isLoading}
-                    />
-                    <label
-                      htmlFor="isActive"
-                      className={`block w-14 h-8 rounded-full cursor-pointer transition-all ${
-                        formData.isActive ? 'bg-green-500' : 'bg-gray-300'
-                      } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <span className={`absolute top-1 left-1 w-6 h-6 rounded-full bg-white transition-transform ${
-                        formData.isActive ? 'transform translate-x-6' : ''
-                      }`}></span>
-                    </label>
-                  </div>
-                  <div>
-                    <div className="font-medium text-gray-900">
-                      {formData.isActive ? 'Activa' : 'Inactiva'}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {formData.isActive ? 'Visible en el menú' : 'Oculta en el menú'}
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
 
-          {/* Vista previa */}
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <h3 className="font-medium text-gray-700 mb-3">Vista Previa</h3>
-            <div
-              className="p-4 rounded-lg flex items-center gap-3"
-              style={{ backgroundColor: `${formData.color}20` }}
-            >
-              <div
-                className="w-12 h-12 rounded-full flex items-center justify-center text-xl"
-                style={{ backgroundColor: formData.color }}
-              >
-                {formData.icon}
-              </div>
-              <div>
-                <div className="font-semibold text-gray-900" style={{ color: formData.color }}>
-                  {formData.name || '[Nombre de categoría]'}
-                </div>
-                {formData.description && (
-                  <div className="text-sm text-gray-600 mt-1">
-                    {formData.description}
-                  </div>
-                )}
-                <div className="flex items-center gap-3 mt-2">
-                  <span className="text-xs px-2 py-1 bg-white rounded-full font-medium">
-                    Orden: {formData.order}
-                  </span>
-                  <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-                    formData.isActive
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {formData.isActive ? '✓ Activa' : '✗ Inactiva'}
-                  </span>
-                </div>
-              </div>
-            </div>
+          {/* Orden */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Orden de Visualización
+            </label>
+            <input
+              type="number"
+              name="order"
+              value={formData.order}
+              onChange={handleChange}
+              min="0"
+              className="w-full md:w-32 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent"
+              placeholder="0"
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Número más bajo aparece primero
+            </p>
+          </div>
+
+          {/* Estado activo */}
+          <div>
+            <label className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
+              <input
+                type="checkbox"
+                name="isActive"
+                checked={formData.isActive}
+                onChange={handleChange}
+                className="w-5 h-5 text-[#EC1F25] rounded focus:ring-[#EC1F25]"
+              />
+              <span className="ml-3 font-medium text-gray-700">
+                Categoría activa (visible en el menú)
+              </span>
+            </label>
           </div>
         </div>
 
         {/* Botones de acción */}
-        <div className="flex justify-end gap-4 pt-6 border-t border-gray-200 mt-6">
+        <div className="flex justify-end gap-4 pt-6 mt-6 border-t border-gray-200">
           <button
             type="button"
             onClick={onCancel}
             className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
-            disabled={isLoading}
+            disabled={isLoading || isUploading}
           >
             Cancelar
           </button>
           <button
             type="submit"
-            disabled={isLoading}
-            className="px-6 py-3 bg-chifa-red text-white font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            disabled={isLoading || isUploading}
+            className="px-6 py-3 bg-[#EC1F25] text-white font-semibold rounded-lg hover:bg-[#d41a1f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            {isLoading ? (
+            {isLoading || isUploading ? (
               <>
-                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                Guardando...
+                <Loader2 className="w-5 h-5 animate-spin" />
+                {isUploading ? 'Procesando imágenes...' : isEditing ? 'Actualizando...' : 'Guardando...'}
               </>
-            ) : category ? 'Actualizar Categoría' : 'Crear Categoría'}
+            ) : isEditing ? (
+              <>
+                <span>✏️</span>
+                Actualizar Categoría
+              </>
+            ) : (
+              <>
+                <span>➕</span>
+                Agregar Categoría
+              </>
+            )}
           </button>
         </div>
       </form>

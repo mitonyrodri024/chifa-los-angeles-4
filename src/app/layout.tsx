@@ -52,7 +52,7 @@ export default function RootLayout({
             <Navbar />
             
             {/* Contenido principal con padding para evitar superposición con navbar fijo */}
-            <main className="flex-grow pt-16 md:pt-20">
+            <main className="flex-grow pt-2 md:pt-2">
               {children}
             </main>
             

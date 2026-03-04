@@ -12,6 +12,7 @@ interface DishGridProps {
   onEditDish?: (dish: Dish) => void;
   onDeleteDish?: (dish: Dish) => void;
   emptyMessage?: string;
+  hideImages?: boolean; // ← NUEVA PROP
 }
 
 export default function DishGrid({ 
@@ -21,7 +22,8 @@ export default function DishGrid({
   showAdminActions = false,
   onEditDish,
   onDeleteDish,
-  emptyMessage = 'No hay platos disponibles' 
+  emptyMessage = 'No hay platos disponibles',
+  hideImages = false // ← VALOR POR DEFECTO
 }: DishGridProps) {
   
   if (dishes.length === 0) {
@@ -51,6 +53,7 @@ export default function DishGrid({
           showAdminActions={showAdminActions}
           onEdit={onEditDish ? () => onEditDish(dish) : undefined}
           onDelete={onDeleteDish ? () => onDeleteDish(dish) : undefined}
+          hideImage={hideImages} // ← PASAR LA NUEVA PROP
         />
       ))}
     </div>
