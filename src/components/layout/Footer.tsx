@@ -34,7 +34,7 @@ export default function Footer() {
                                     <p className="text-sm text-gray-300">Desde 1995</p>
                                 </div>
                             </div>
-                            
+
                             <div className="space-y-3">
                                 <p className="text-lg font-semibold text-[#FFF100] italic">
                                     "La mejor experiencia de comida oriental en Cajamarca"
@@ -50,7 +50,7 @@ export default function Footer() {
                             <h3 className="text-xl font-bold border-l-4 border-[#EC1F25] pl-3">
                                 Contacto Directo
                             </h3>
-                            
+
                             <div className="space-y-4">
                                 <div className="flex items-start gap-3 group">
                                     <div className="w-10 h-10 bg-[#EC1F25] rounded-full flex items-center justify-center flex-shrink-0 group-hover:bg-[#FFF100] group-hover:text-[#EC1F25] transition-all duration-300">
@@ -58,8 +58,8 @@ export default function Footer() {
                                     </div>
                                     <div>
                                         <p className="font-semibold">Reservas y Pedidos</p>
-                                        <a 
-                                            href="tel:+51999123456" 
+                                        <a
+                                            href="tel:+51999123456"
                                             className="text-lg font-bold hover:text-[#FFF100] transition-colors duration-300"
                                         >
                                             +51 999 123 456
@@ -97,37 +97,37 @@ export default function Footer() {
                             <h3 className="text-xl font-bold border-l-4 border-[#EC1F25] pl-3">
                                 Síguenos
                             </h3>
-                            
+
                             <div className="space-y-4">
                                 <p className="text-gray-300">
                                     Mantente al día con nuestras ofertas y nuevos platos
                                 </p>
-                                
+
                                 {/* Redes sociales */}
                                 <div className="flex gap-4">
-                                    <a 
-                                        href="#" 
+                                    <a
+                                        href="#"
                                         className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#EC1F25] hover:scale-110 transition-all duration-300 group"
                                         aria-label="Facebook"
                                     >
                                         <Facebook className="w-6 h-6 text-white group-hover:text-white" />
                                     </a>
-                                    <a 
-                                        href="#" 
+                                    <a
+                                        href="#"
                                         className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#EC1F25] hover:scale-110 transition-all duration-300 group"
                                         aria-label="Instagram"
                                     >
                                         <Instagram className="w-6 h-6 text-white group-hover:text-white" />
                                     </a>
-                                    <a 
-                                        href="#" 
+                                    <a
+                                        href="#"
                                         className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#EC1F25] hover:scale-110 transition-all duration-300 group"
                                         aria-label="Twitter"
                                     >
                                         <Twitter className="w-6 h-6 text-white group-hover:text-white" />
                                     </a>
-                                    <a 
-                                        href="https://wa.me/51999123456" 
+                                    <a
+                                        href="https://wa.me/51999123456"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#25D366] hover:scale-110 transition-all duration-300 group"
@@ -143,7 +143,7 @@ export default function Footer() {
                                         <p className="font-medium text-[#FFF100]">"El auténtico sabor chino"</p>
                                         <p className="text-sm text-gray-300">Más de 25 años de tradición</p>
                                     </div>
-                                    
+
                                     <div className="bg-[#2A2B2E]/50 rounded-lg p-4 border-l-4 border-[#EC1F25]">
                                         <p className="font-medium text-white">"Calidad y sabor inigualables"</p>
                                         <p className="text-sm text-gray-300">Ingredientes frescos cada día</p>
@@ -201,19 +201,7 @@ export default function Footer() {
                 </div>
             </div>
 
-            {/* Botón flotante de WhatsApp */}
-            <a 
-                href="https://wa.me/51999123456"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="fixed bottom-6 right-6 z-40"
-                aria-label="Contactar por WhatsApp"
-            >
-                <div className="w-14 h-14 bg-[#25D366] rounded-full flex items-center justify-center shadow-xl hover:shadow-2xl hover:scale-110 transition-all duration-300 group">
-                    <MessageCircle className="w-7 h-7 text-white" />
-                    <div className="absolute -top-2 -right-2 w-5 h-5 bg-[#EC1F25] rounded-full animate-ping opacity-75"></div>
-                </div>
-            </a>
+            
         </footer>
     );
 }
