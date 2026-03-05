@@ -59,10 +59,10 @@ export default function Footer() {
                                     <div>
                                         <p className="font-semibold">Reservas y Pedidos</p>
                                         <a
-                                            href="tel:+51999123456"
+                                            href="tel:+51963753366"
                                             className="text-lg font-bold hover:text-[#FFF100] transition-colors duration-300"
                                         >
-                                            +51 999 123 456
+                                            +51 963 753 366
                                         </a>
                                         <p className="text-sm text-gray-400">Delivery disponible</p>
                                     </div>
@@ -106,7 +106,7 @@ export default function Footer() {
                                 {/* Redes sociales */}
                                 <div className="flex gap-4">
                                     <a
-                                        href="#"
+                                        href="https://www.facebook.com/Chifalosangeles4"
                                         className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#EC1F25] hover:scale-110 transition-all duration-300 group"
                                         aria-label="Facebook"
                                     >
@@ -127,7 +127,7 @@ export default function Footer() {
                                         <Twitter className="w-6 h-6 text-white group-hover:text-white" />
                                     </a>
                                     <a
-                                        href="https://wa.me/51999123456"
+                                        href="https://wa.me/51963753366"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#25D366] hover:scale-110 transition-all duration-300 group"

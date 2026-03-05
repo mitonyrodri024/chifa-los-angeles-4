@@ -2,9 +2,8 @@
 'use client';
 
 import { Dish } from '@/types/menu.types';
-import { Utensils, Truck, Clock, Flame, Leaf } from 'lucide-react';
+import { Utensils, Truck, Clock } from 'lucide-react';
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 
 interface DishCardProps {
   dish: Dish;
@@ -26,36 +25,48 @@ export default function DishCard({
   hideImage = false
 }: DishCardProps) {
   const [imageError, setImageError] = useState(false);
-  const router = useRouter();
 
-  // Función para agregar al carrito (usada por ambos botones)
+  // Función para agregar al carrito (CORREGIDA)
   const addToCart = () => {
     if (!dish.isAvailable) return;
     
     try {
+      // Obtener carrito actual
       const savedCart = localStorage.getItem('cart');
       let cart = savedCart ? JSON.parse(savedCart) : [];
       
-      const existingItem = cart.find((item: any) => item.dishId === dish.id);
+      // Verificar si el plato ya está en el carrito
+      const existingItemIndex = cart.findIndex((item: any) => item.dishId === dish.id);
       
-      if (existingItem) {
-        existingItem.quantity += 1;
+      if (existingItemIndex !== -1) {
+        // Si existe, incrementar cantidad
+        cart[existingItemIndex].quantity += 1;
       } else {
+        // Si no existe, agregar nuevo item con TODOS los datos del plato
         cart.push({
           dishId: dish.id,
           dishName: dish.name,
           price: dish.price,
           quantity: 1,
-          image: dish.image
+          image: dish.image || '/placeholder.jpg',
+          categoryName: dish.categoryName,
+          description: dish.description,
+          preparationTime: dish.preparationTime
         });
       }
       
+      // Guardar en localStorage
       localStorage.setItem('cart', JSON.stringify(cart));
+      
+      // Disparar evento para actualizar el navbar
       window.dispatchEvent(new Event('cartUpdated'));
+      
+      // Mostrar confirmación
       alert(`✅ "${dish.name}" agregado al carrito`);
       
     } catch (error) {
       console.error('Error al agregar al carrito:', error);
+      alert('❌ Error al agregar al carrito');
     }
   };
 
@@ -67,7 +78,7 @@ export default function DishCard({
       return;
     }
     
-    addToCart(); // Usar la función común
+    addToCart();
   };
 
   const handleDeliveryClick = () => {
@@ -78,14 +89,36 @@ export default function DishCard({
       return;
     }
     
-    addToCart(); // Usar la función común
-    // Opcional: redirigir al checkout después de agregar
-    // router.push('/checkout');
+    addToCart(); // Ahora SÍ funciona
   };
   
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-200 flex flex-col h-full">
       
+      {/* Imagen (opcional) */}
+      {!hideImage && (
+        <div className="relative h-48 bg-gray-100 overflow-hidden">
+          {dish.image && !imageError ? (
+            <img
+              src={dish.image}
+              alt={dish.name}
+              className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-100 to-yellow-100">
+              <span className="text-6xl">🍜</span>
+            </div>
+          )}
+          {!dish.isAvailable && (
+            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+              <span className="text-white font-bold text-lg px-4 py-2 bg-red-600 rounded-lg transform -rotate-12">
+                NO DISPONIBLE
+              </span>
+            </div>
+          )}
+        </div>
+      )}
       
       {/* Información del plato */}
       <div className="p-4 flex-grow">
@@ -102,37 +135,23 @@ export default function DishCard({
         </h3>
 
         {/* Descripción */}
-        <div className="text-gray-600 text-sm mb-4 line-clamp-2 flex-grow">
+        <p className="text-gray-600 text-sm mb-4 line-clamp-2">
           {dish.description}
-        </div>
+        </p>
 
         {/* Información adicional */}
-        <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
-          {dish.preparationTime && (
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              <span>{dish.preparationTime} min</span>
-            </div>
-          )}
-          
-          {dish.ingredients && dish.ingredients.length > 0 && (
-            <div className="text-xs text-gray-400">
-              {dish.ingredients.slice(0, 2).join(', ')}
-              {dish.ingredients.length > 2 && '...'}
-            </div>
-          )}
-        </div>
+        {dish.preparationTime && (
+          <div className="flex items-center gap-1 text-sm text-gray-500 mb-4">
+            <Clock className="w-4 h-4" />
+            <span>{dish.preparationTime} min</span>
+          </div>
+        )}
 
         {/* Precio */}
         <div className="flex items-center justify-between mb-4">
           <span className="text-2xl font-bold text-[#EC1F25]">
             S/ {dish.price.toFixed(2)}
           </span>
-          {!dish.isAvailable && (
-            <span className="text-sm font-semibold text-gray-400 bg-gray-100 px-2 py-1 rounded">
-              No disponible
-            </span>
-          )}
         </div>
       </div>
 
@@ -161,7 +180,7 @@ export default function DishCard({
             </button>
           </div>
         ) : (
-          /* Botones para cliente - AMBOS AGREGAN AL CARRITO */
+          /* Botones para cliente - AHORA AMBOS FUNCIONAN */
           <div className="flex gap-2">
             <button
               onClick={handleOrderClick}

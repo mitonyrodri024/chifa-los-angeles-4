@@ -137,7 +137,7 @@ export default function Navbar() {
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
                   <Phone className="w-4 h-4" />
-                  <a href="tel:+51999123456" className="font-medium">+51 999 123 456</a>
+                  <a href="tel:+51963753366" className="font-medium">+51 963 753 366</a>
                 </div>
                 <div className="flex items-center gap-2">
                   <MapPin className="w-4 h-4" />
@@ -196,7 +196,7 @@ export default function Navbar() {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2 hover:text-[#FFF100] transition-colors duration-300">
                 <Phone className="w-4 h-4" />
-                <a href="tel:+51999123456" className="font-medium">+51 999 123 456</a>
+                <a href="tel:+51963753366" className="font-medium">+51 963 753 366</a>
               </div>
               <div className="flex items-center gap-2 hover:text-[#FFF100] transition-colors duration-300">
                 <MapPin className="w-4 h-4" />
