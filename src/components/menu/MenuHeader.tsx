@@ -82,7 +82,7 @@ export default function MenuHeader({
   // Obtener categoría actual
   const currentCategory = activeCategories[currentCategoryIndex];
   
-  // ✅ CORREGIDO: Obtener platos de la categoría actual con todas las propiedades necesarias
+  // Obtener platos de la categoría actual con todas las propiedades necesarias
   const currentCategoryDishes = currentCategory 
     ? dishes
         .filter(dish => dish.categoryId === currentCategory.id && dish.isAvailable !== false)
@@ -93,7 +93,7 @@ export default function MenuHeader({
           price: Number(dish.price) || 0,
           image: dish.image || '',
           categoryId: dish.categoryId,
-          categoryName: currentCategory.name, // ← Usar el nombre actual
+          categoryName: currentCategory.name,
           isAvailable: dish.isAvailable ?? true,
           isVegetarian: dish.isVegetarian ?? false,
           isSpicy: dish.isSpicy ?? false,
@@ -107,6 +107,23 @@ export default function MenuHeader({
 
   // Obtener imágenes de la categoría (máximo 2)
   const categoryImages = currentCategory?.images?.slice(0, 2) || [];
+
+  // Función de respaldo para cuando no se proporcionan manejadores
+  const handleOrder = (dish: Dish) => {
+    if (onOrder) {
+      onOrder(dish);
+    } else {
+      console.log('Ordenando:', dish.name);
+    }
+  };
+
+  const handleDelivery = (dish: Dish) => {
+    if (onDelivery) {
+      onDelivery(dish);
+    } else {
+      console.log('Delivery:', dish.name);
+    }
+  };
 
   return (
     <div className="mb-6 md:mb-10">
@@ -267,11 +284,11 @@ export default function MenuHeader({
                   Nuestros Platos
                 </h2>
                 
-                {/* ✅ AHORA SÍ FUNCIONA porque los platos tienen todas las propiedades */}
+                {/* ✅ AHORA SÍ FUNCIONA - Pasamos los manejadores correctamente */}
                 <DishGrid
                   dishes={currentCategoryDishes}
-                  onOrder={onOrder || (() => {})}
-                  onDelivery={onDelivery || (() => {})}
+                  onOrder={handleOrder}      // ← Usamos las funciones de respaldo
+                  onDelivery={handleDelivery} // ← Usamos las funciones de respaldo
                   showAdminActions={showAdminActions}
                   onEditDish={onEditDish}
                   onDeleteDish={onDeleteDish}
