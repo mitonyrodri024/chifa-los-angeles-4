@@ -1,3 +1,4 @@
+// src/types/menu.types.ts
 export interface Dish {
   id: string;
   name: string;
@@ -14,6 +15,8 @@ export interface Dish {
   createdAt: Date;
   updatedAt?: Date;
   orderCount?: number; // Para popularidad
+  // CAMPOS PARA EL COBRO ADICIONAL EN DELIVERY
+  dishType?: 'sopa' | 'menu' | 'normal'; // Tipo de plato
 }
 
 export interface Category {
@@ -25,7 +28,7 @@ export interface Category {
   icon?: string;
   color?: string;
   order?: number;
-  images?: string[]; // ← NUEVO: Array de imágenes Base64
+  images?: string[]; // Array de imágenes Base64
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -38,6 +41,12 @@ export interface Order {
   userPhone?: string;
   items: OrderItem[];
   total: number;
+  subtotal?: number;
+  surcharges?: {
+    sopa?: number;
+    menu?: number;
+    total?: number;
+  };
   status: 'pending' | 'preparing' | 'ready' | 'delivered' | 'cancelled';
   type: 'pickup' | 'delivery';
   deliveryAddress?: string;
@@ -52,12 +61,21 @@ export interface OrderItem {
   quantity: number;
   price: number;
   notes?: string;
+  dishType?: 'sopa' | 'menu' | 'normal';
+  surcharge?: number; // Sobrecargo aplicado a este item
 }
 
 export interface CartItem {
   dishId: string;
   quantity: number;
   notes?: string;
+  dishName: string;
+  price: number;
+  image?: string;
+  categoryName: string;
+  description?: string;
+  preparationTime?: number;
+  dishType?: 'sopa' | 'menu' | 'normal';
 }
 
 export interface FilterOptions {

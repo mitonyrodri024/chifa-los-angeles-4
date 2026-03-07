@@ -15,29 +15,36 @@ interface DishCardProps {
   hideImage?: boolean;
 }
 
-export default function DishCard({ 
-  dish, 
-  onOrder, 
-  onDelivery, 
+export default function DishCard({
+  dish,
+  onOrder,
+  onDelivery,
   showAdminActions = false,
   onEdit,
   onDelete,
   hideImage = false
 }: DishCardProps) {
   const [imageError, setImageError] = useState(false);
+  const [showAddedMessage, setShowAddedMessage] = useState(false);
 
-  // Función para agregar al carrito (CORREGIDA)
+  // Función para agregar al carrito
   const addToCart = () => {
     if (!dish.isAvailable) return;
-    
+
+    console.log('🍽️ Agregando al carrito:', {
+      name: dish.name,
+      dishType: dish.dishType,
+      dishTypeFromDB: dish.dishType
+    });
+
     try {
       // Obtener carrito actual
       const savedCart = localStorage.getItem('cart');
       let cart = savedCart ? JSON.parse(savedCart) : [];
-      
+
       // Verificar si el plato ya está en el carrito
       const existingItemIndex = cart.findIndex((item: any) => item.dishId === dish.id);
-      
+
       if (existingItemIndex !== -1) {
         // Si existe, incrementar cantidad
         cart[existingItemIndex].quantity += 1;
@@ -51,19 +58,22 @@ export default function DishCard({
           image: dish.image || '/placeholder.jpg',
           categoryName: dish.categoryName,
           description: dish.description,
-          preparationTime: dish.preparationTime
+          preparationTime: dish.preparationTime,
+          // NUEVO: Guardar dishType para el cobro adicional
+          dishType: dish.dishType || 'normal'
         });
       }
-      
+
       // Guardar en localStorage
       localStorage.setItem('cart', JSON.stringify(cart));
-      
+
       // Disparar evento para actualizar el navbar
       window.dispatchEvent(new Event('cartUpdated'));
-      
-      // Mostrar confirmación
-      alert(`✅ "${dish.name}" agregado al carrito`);
-      
+
+      // Mostrar mensaje de confirmación temporal
+      setShowAddedMessage(true);
+      setTimeout(() => setShowAddedMessage(false), 2000);
+
     } catch (error) {
       console.error('Error al agregar al carrito:', error);
       alert('❌ Error al agregar al carrito');
@@ -72,61 +82,60 @@ export default function DishCard({
 
   const handleOrderClick = () => {
     if (!dish.isAvailable) return;
-    
+
     if (onOrder) {
       onOrder();
       return;
     }
-    
+
     addToCart();
   };
 
   const handleDeliveryClick = () => {
     if (!dish.isAvailable) return;
-    
+
     if (onDelivery) {
       onDelivery();
       return;
     }
-    
-    addToCart(); // Ahora SÍ funciona
+
+    addToCart();
   };
-  
+
+  // Función para obtener el icono según el tipo de plato
+  const getDishTypeIcon = () => {
+    if (dish.dishType === 'sopa') return '🍲';
+    if (dish.dishType === 'menu') return '🍱';
+    return null;
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-200 flex flex-col h-full">
-      
-      {/* Imagen (opcional) */}
-      {!hideImage && (
-        <div className="relative h-48 bg-gray-100 overflow-hidden">
-          {dish.image && !imageError ? (
-            <img
-              src={dish.image}
-              alt={dish.name}
-              className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-red-100 to-yellow-100">
-              <span className="text-6xl">🍜</span>
-            </div>
-          )}
-          {!dish.isAvailable && (
-            <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-              <span className="text-white font-bold text-lg px-4 py-2 bg-red-600 rounded-lg transform -rotate-12">
-                NO DISPONIBLE
-              </span>
-            </div>
-          )}
+    <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-200 flex flex-col h-full relative">
+
+      {/* Mensaje de confirmación temporal */}
+      {showAddedMessage && (
+        <div className="absolute top-2 right-2 z-10 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold animate-bounce">
+          ✅ Agregado
         </div>
       )}
-      
+
       {/* Información del plato */}
       <div className="p-4 flex-grow">
         {/* Categoría */}
-        <div className="mb-2">
+        <div className="mb-2 flex items-center justify-between">
           <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-400 text-gray-900">
             {dish.categoryName}
           </span>
+
+          {/* NUEVO: Mostrar tipo en línea si no hay imagen */}
+          {hideImage && dish.dishType && dish.dishType !== 'normal' && (
+            <span className={`text-xs px-2 py-1 rounded-full font-semibold ${dish.dishType === 'sopa'
+                ? 'bg-blue-100 text-blue-800'
+                : 'bg-purple-100 text-purple-800'
+              }`}>
+              {dish.dishType === 'sopa' ? '🍲 Sopa' : '🍱 Menú'}
+            </span>
+          )}
         </div>
 
         {/* Nombre */}
@@ -140,18 +149,44 @@ export default function DishCard({
         </p>
 
         {/* Información adicional */}
-        {dish.preparationTime && (
-          <div className="flex items-center gap-1 text-sm text-gray-500 mb-4">
-            <Clock className="w-4 h-4" />
-            <span>{dish.preparationTime} min</span>
-          </div>
-        )}
+        <div className="flex items-center gap-3 text-sm text-gray-500 mb-4">
+          {dish.preparationTime && (
+            <div className="flex items-center gap-1">
+              <Clock className="w-4 h-4" />
+              <span>{dish.preparationTime} min</span>
+            </div>
+          )}
 
-        {/* Precio */}
+          {/* Ingredientes si existen */}
+          {dish.ingredients && dish.ingredients.length > 0 && (
+            <div className="flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded-full">
+              <span>🥘 {dish.ingredients.slice(0, 2).join(', ')}</span>
+              {dish.ingredients.length > 2 && <span>+{dish.ingredients.length - 2}</span>}
+            </div>
+          )}
+        </div>
+
+        {/* Precio y tipo */}
         <div className="flex items-center justify-between mb-4">
           <span className="text-2xl font-bold text-[#EC1F25]">
             S/ {dish.price.toFixed(2)}
           </span>
+
+          <div className="flex items-center gap-2">
+            {/* NUEVO: Mostrar información de sobrecargo si aplica */}
+            {dish.dishType && dish.dishType !== 'normal' && (
+              <span className="text-xs text-gray-500">
+                {dish.dishType === 'sopa' ? '+S/0.50' : '+S/1.00'} en delivery
+              </span>
+            )}
+
+            {/* Popularidad (opcional) */}
+            {dish.orderCount && dish.orderCount > 0 && (
+              <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
+                🔥 {dish.orderCount} pedidos
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -180,29 +215,27 @@ export default function DishCard({
             </button>
           </div>
         ) : (
-          /* Botones para cliente - AHORA AMBOS FUNCIONAN */
+          /* Botones para cliente */
           <div className="flex gap-2">
             <button
               onClick={handleOrderClick}
               disabled={!dish.isAvailable}
-              className={`flex-1 py-2 px-3 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                dish.isAvailable
-                  ? 'bg-[#EC1F25] hover:bg-[#d41a1f] text-white shadow-md hover:shadow-lg'
+              className={`flex-1 py-2 px-3 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${dish.isAvailable
+                  ? 'bg-[#EC1F25] hover:bg-[#d41a1f] text-white shadow-md hover:shadow-lg active:scale-95'
                   : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              }`}
+                }`}
             >
               <Utensils className="w-3.5 h-3.5" />
               <span>Pedir</span>
             </button>
-            
+
             <button
               onClick={handleDeliveryClick}
               disabled={!dish.isAvailable}
-              className={`flex-1 py-2 px-3 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${
-                dish.isAvailable
-                  ? 'bg-yellow-400 hover:bg-yellow-500 text-gray-900 shadow-md hover:shadow-lg'
+              className={`flex-1 py-2 px-3 text-sm font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 ${dish.isAvailable
+                  ? 'bg-yellow-400 hover:bg-yellow-500 text-gray-900 shadow-md hover:shadow-lg active:scale-95'
                   : 'bg-gray-200 text-gray-500 cursor-not-allowed'
-              }`}
+                }`}
             >
               <Truck className="w-3.5 h-3.5" />
               <span>Delivery</span>

@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import ProtectedAdmin from '@/components/shared/ProtectedAdmin';
 import { categoryService } from '@/lib/firebase/categoryService';
 import { dishService } from '@/lib/firebase/dishService';
-import { 
-  ArrowLeft, Plus, Edit2, Trash2, Eye, EyeOff, 
-  Search, Filter, Loader2, AlertCircle, CheckCircle 
+import {
+  ArrowLeft, Plus, Edit2, Trash2, Eye, EyeOff,
+  Search, Filter, Loader2, AlertCircle, CheckCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -25,10 +25,16 @@ interface Dish {
   ingredients?: string[];
 }
 
+interface Category {
+  id: string;
+  name: string;
+  isActive: boolean;
+}
+
 export default function AdminDishesPage() {
   const router = useRouter();
   const [dishes, setDishes] = useState<Dish[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -42,12 +48,41 @@ export default function AdminDishesPage() {
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
+      setError(null);
       try {
         const [dishesData, categoriesData] = await Promise.all([
           dishService.getAllDishes(),
           categoryService.getAllCategories()
         ]);
+
+        console.log('Dishes cargados:', dishesData);
+        console.log('Categorías cargadas:', categoriesData);
+
         setCategories(categoriesData);
+
+        // Mapear platos con el nombre de la categoría y asegurar dishType
+        const dishesWithCategoryName = dishesData.map((dish: any) => {
+          const category = categoriesData.find((cat: Category) => cat.id === dish.categoryId);
+          return {
+            ...dish,
+            categoryName: category?.name || 'Sin categoría',
+            price: Number(dish.price) || 0,
+            isAvailable: dish.isAvailable ?? true,
+            isVegetarian: dish.isVegetarian ?? false,
+            isSpicy: dish.isSpicy ?? false,
+            description: dish.description || '',
+            preparationTime: dish.preparationTime || 15,
+            ingredients: Array.isArray(dish.ingredients) ? dish.ingredients : [],
+            dishType: dish.dishType || 'normal' // ← FORZAR 'normal' SI NO EXISTE
+          };
+        });
+
+        console.log('Dishes con dishType:', dishesWithCategoryName.map(d => ({
+          name: d.name,
+          dishType: d.dishType
+        })));
+
+        setDishes(dishesWithCategoryName);
       } catch (error) {
         console.error('Error al cargar datos:', error);
         setError('Error al cargar los platos');
@@ -55,6 +90,7 @@ export default function AdminDishesPage() {
         setIsLoading(false);
       }
     };
+
     loadData();
   }, []);
 
@@ -62,14 +98,15 @@ export default function AdminDishesPage() {
   const filteredDishes = dishes.filter(dish => {
     // Filtro por búsqueda
     const matchesSearch = dish.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         dish.description?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      dish.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      dish.categoryName?.toLowerCase().includes(searchTerm.toLowerCase());
+
     // Filtro por categoría
     const matchesCategory = selectedCategory === 'all' || dish.categoryId === selectedCategory;
-    
+
     // Filtro por disponibilidad
     const matchesAvailability = !showAvailableOnly || dish.isAvailable;
-    
+
     return matchesSearch && matchesCategory && matchesAvailability;
   });
 
@@ -79,16 +116,18 @@ export default function AdminDishesPage() {
   // Eliminar plato
   const handleDelete = async (dishId: string) => {
     setIsDeleting(true);
+    setError(null);
     try {
       const success = await dishService.deleteDish(dishId);
       if (success) {
         setDishes(dishes.filter(d => d.id !== dishId));
-        setSuccessMessage('Plato eliminado correctamente');
+        setSuccessMessage('✅ Plato eliminado correctamente');
         setTimeout(() => setSuccessMessage(null), 3000);
       } else {
         setError('Error al eliminar el plato');
       }
     } catch (error) {
+      console.error('Error al eliminar:', error);
       setError('Error al eliminar el plato');
     } finally {
       setIsDeleting(false);
@@ -102,14 +141,16 @@ export default function AdminDishesPage() {
       const updated = await dishService.updateDish(dish.id, {
         isAvailable: !dish.isAvailable
       });
+
       if (updated) {
-        setDishes(dishes.map(d => 
+        setDishes(dishes.map(d =>
           d.id === dish.id ? { ...d, isAvailable: !d.isAvailable } : d
         ));
-        setSuccessMessage(`Plato ${dish.isAvailable ? 'desactivado' : 'activado'}`);
+        setSuccessMessage(`✅ Plato ${dish.isAvailable ? 'desactivado' : 'activado'}`);
         setTimeout(() => setSuccessMessage(null), 3000);
       }
     } catch (error) {
+      console.error('Error al cambiar disponibilidad:', error);
       setError('Error al cambiar disponibilidad');
     }
   };
@@ -118,7 +159,7 @@ export default function AdminDishesPage() {
     <ProtectedAdmin>
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-8">
         <div className="max-w-7xl mx-auto px-4">
-          
+
           {/* Header */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-6">
@@ -138,7 +179,7 @@ export default function AdminDishesPage() {
                   </p>
                 </div>
               </div>
-              
+
               <Link
                 href="/admin/dishes/add"
                 className="px-4 py-2 bg-[#F59E0B] hover:bg-yellow-600 text-white font-semibold rounded-lg transition-all hover:scale-105 flex items-center gap-2 shadow-md"
@@ -259,11 +300,11 @@ export default function AdminDishesPage() {
                 No hay platos para mostrar
               </h3>
               <p className="text-gray-600 mb-6">
-                {searchTerm || selectedCategory !== 'all' 
-                  ? 'Intenta con otros filtros' 
+                {searchTerm || selectedCategory !== 'all' || showAvailableOnly
+                  ? 'Intenta con otros filtros'
                   : 'Comienza agregando tu primer plato'}
               </p>
-              {(searchTerm || selectedCategory !== 'all') ? (
+              {(searchTerm || selectedCategory !== 'all' || showAvailableOnly) ? (
                 <button
                   onClick={() => {
                     setSearchTerm('');
@@ -319,15 +360,21 @@ export default function AdminDishesPage() {
                             <div className="font-medium text-gray-900">
                               {dish.name}
                               {dish.isVegetarian && (
-                                <span className="ml-2 text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded">Veg</span>
+                                <span className="ml-2 text-xs bg-green-100 text-green-800 px-1.5 py-0.5 rounded">🌱 Veg</span>
                               )}
                               {dish.isSpicy && (
-                                <span className="ml-2 text-xs bg-red-100 text-red-800 px-1.5 py-0.5 rounded">Picante</span>
+                                <span className="ml-2 text-xs bg-red-100 text-red-800 px-1.5 py-0.5 rounded">🌶️ Picante</span>
                               )}
                             </div>
                             {dish.description && (
-                              <div className="text-sm text-gray-500 line-clamp-1">
+                              <div className="text-sm text-gray-500 line-clamp-1 mt-1">
                                 {dish.description}
+                              </div>
+                            )}
+                            {dish.ingredients && dish.ingredients.length > 0 && (
+                              <div className="text-xs text-gray-400 mt-1">
+                                🥘 {dish.ingredients.slice(0, 3).join(', ')}
+                                {dish.ingredients.length > 3 && ` +${dish.ingredients.length - 3}`}
                               </div>
                             )}
                           </div>
@@ -345,11 +392,10 @@ export default function AdminDishesPage() {
                         <td className="px-6 py-4">
                           <button
                             onClick={() => handleToggleAvailability(dish)}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-colors ${
-                              dish.isAvailable
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-semibold transition-colors ${dish.isAvailable
                                 ? 'bg-green-100 text-green-800 hover:bg-green-200'
                                 : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
+                              }`}
                           >
                             {dish.isAvailable ? (
                               <>
@@ -367,7 +413,7 @@ export default function AdminDishesPage() {
                         <td className="px-6 py-4">
                           {dish.preparationTime && (
                             <span className="text-sm text-gray-600">
-                              {dish.preparationTime} min
+                              ⏱️ {dish.preparationTime} min
                             </span>
                           )}
                         </td>
@@ -401,18 +447,20 @@ export default function AdminDishesPage() {
                                 </h3>
                                 <p className="text-gray-600 text-center mb-6">
                                   ¿Estás seguro de eliminar <span className="font-bold">"{dish.name}"</span>?
+                                  <br />
+                                  <span className="text-sm text-red-500">Esta acción no se puede deshacer</span>
                                 </p>
                                 <div className="flex gap-3">
                                   <button
                                     onClick={() => setDeleteConfirm(null)}
-                                    className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50"
+                                    className="flex-1 px-4 py-2 border-2 border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
                                     disabled={isDeleting}
                                   >
                                     Cancelar
                                   </button>
                                   <button
                                     onClick={() => handleDelete(dish.id)}
-                                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2"
+                                    className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg flex items-center justify-center gap-2 transition-colors"
                                     disabled={isDeleting}
                                   >
                                     {isDeleting ? (

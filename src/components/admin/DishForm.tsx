@@ -1,10 +1,10 @@
-// components/admin/DishForm.tsx
+// src/components/admin/DishForm.tsx
 'use client';
 
 import { Dish } from '@/types/menu.types';
 import { Category } from '@/types/menu.types';
 import { useState } from 'react';
-import { X, AlertCircle, Loader2 } from 'lucide-react';
+import { X, AlertCircle, Loader2, Soup, Menu, Utensils } from 'lucide-react';
 
 interface DishFormProps {
   dish?: Dish | null;
@@ -33,7 +33,8 @@ export default function DishForm({
     isSpicy: dish?.isSpicy ?? false,
     preparationTime: dish?.preparationTime || 15,
     ingredients: dish?.ingredients?.join(', ') || '',
-    // Eliminamos 'image' del estado
+    // NUEVO: Campo para tipo de plato
+    dishType: dish?.dishType || 'normal',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -80,41 +81,48 @@ export default function DishForm({
       newErrors.preparationTime = 'El tiempo de preparación debe ser mayor a 0';
     }
 
-    // Eliminamos la validación de imagen
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (!validateForm()) {
-    const firstError = Object.keys(errors)[0];
-    if (firstError) {
-      const element = document.querySelector(`[name="${firstError}"]`);
-      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      const firstError = Object.keys(errors)[0];
+      if (firstError) {
+        const element = document.querySelector(`[name="${firstError}"]`);
+        element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
     }
-    return;
-  }
 
-  const dishData: Omit<Dish, 'id' | 'createdAt' | 'updatedAt'> = {
-    name: formData.name.trim(),
-    description: formData.description.trim(),
-    price: formData.price,
-    image: '', // ← IMAGEN VACÍA O POR DEFECTO
-    categoryId: formData.categoryId,
-    categoryName: categories.find(c => c.id === formData.categoryId)?.name || '',
-    isAvailable: formData.isAvailable,
-    isVegetarian: formData.isVegetarian,
-    isSpicy: formData.isSpicy,
-    preparationTime: formData.preparationTime,
-    ingredients: formData.ingredients.split(',').map(i => i.trim()).filter(i => i),
-    // orderCount es opcional, no necesitas incluirlo
+    const dishData: Omit<Dish, 'id' | 'createdAt' | 'updatedAt'> = {
+      name: formData.name.trim(),
+      description: formData.description.trim(),
+      price: formData.price,
+      image: dish?.image || '', // Mantener imagen existente o string vacío
+      categoryId: formData.categoryId,
+      categoryName: categories.find(c => c.id === formData.categoryId)?.name || '',
+      isAvailable: formData.isAvailable,
+      isVegetarian: formData.isVegetarian,
+      isSpicy: formData.isSpicy,
+      preparationTime: formData.preparationTime,
+      ingredients: formData.ingredients.split(',').map(i => i.trim()).filter(i => i),
+      dishType: formData.dishType, // ← NUEVO: incluir tipo de plato
+    };
+
+    onSubmit(dishData);
   };
 
-  onSubmit(dishData);
-};  
+  // Función para obtener el icono según el tipo seleccionado
+  const getDishTypeIcon = (type: string) => {
+    switch(type) {
+      case 'sopa': return <Soup className="w-5 h-5" />;
+      case 'menu': return <Menu className="w-5 h-5" />;
+      default: return <Utensils className="w-5 h-5" />;
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto bg-white rounded-xl shadow-lg overflow-hidden">
@@ -272,7 +280,30 @@ export default function DishForm({
             )}
           </div>
 
-          {/* SECCIÓN DE IMAGEN ELIMINADA COMPLETAMENTE */}
+          {/* NUEVO: Tipo de Plato */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tipo de Plato *
+            </label>
+            <select
+              name="dishType"
+              value={formData.dishType}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent"
+            >
+              <option value="normal">🍽️ Normal (sin recargo)</option>
+              <option value="sopa">🍲 Sopa (+S/0.50 en delivery)</option>
+              <option value="menu">🍱 Menú (+S/1.00 en delivery)</option>
+            </select>
+            <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
+              {getDishTypeIcon(formData.dishType)}
+              <span>
+                {formData.dishType === 'sopa' && 'Las sopas tienen un recargo de S/0.50 en delivery'}
+                {formData.dishType === 'menu' && 'Los menús tienen un recargo de S/1.00 en delivery'}
+                {formData.dishType === 'normal' && 'Los platos normales no tienen recargo adicional'}
+              </span>
+            </p>
+          </div>
 
           {/* Ingredientes */}
           <div className="md:col-span-2">
@@ -294,7 +325,7 @@ export default function DishForm({
         </div>
 
         {/* Opciones booleanas */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
           <label className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
             <input
               type="checkbox"
@@ -314,7 +345,7 @@ export default function DishForm({
               onChange={handleChange}
               className="w-5 h-5 text-[#EC1F25] rounded focus:ring-[#EC1F25]"
             />
-            <span className="ml-3 font-medium text-gray-700">Vegetariano</span>
+            <span className="ml-3 font-medium text-gray-700">🌱 Vegetariano</span>
           </label>
 
           <label className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer">
@@ -325,8 +356,21 @@ export default function DishForm({
               onChange={handleChange}
               className="w-5 h-5 text-[#EC1F25] rounded focus:ring-[#EC1F25]"
             />
-            <span className="ml-3 font-medium text-gray-700">Picante</span>
+            <span className="ml-3 font-medium text-gray-700">🌶️ Picante</span>
           </label>
+
+          {/* Indicador visual del tipo seleccionado */}
+          <div className={`p-4 border-2 rounded-lg flex items-center justify-center gap-2 ${
+            formData.dishType === 'sopa' ? 'border-blue-500 bg-blue-50' :
+            formData.dishType === 'menu' ? 'border-purple-500 bg-purple-50' :
+            'border-gray-300 bg-gray-50'
+          }`}>
+            {getDishTypeIcon(formData.dishType)}
+            <span className="font-medium">
+              {formData.dishType === 'sopa' ? 'Sopa' :
+               formData.dishType === 'menu' ? 'Menú' : 'Normal'}
+            </span>
+          </div>
         </div>
 
         {/* Botones de acción */}

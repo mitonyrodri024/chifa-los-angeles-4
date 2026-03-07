@@ -23,16 +23,16 @@ export default function AddDishPage() {
     const loadData = async () => {
       try {
         setIsLoadingCategories(true);
-        
+
         // Cargar categorías
         const categoriesData = await categoryService.getAllCategories();
         console.log('📁 Categorías cargadas:', categoriesData);
         setCategories(categoriesData);
-        
+
         // Cargar conteo de platos
         const dishesData = await dishService.getAllDishes();
         setTotalDishes(dishesData.length);
-        
+
       } catch (error) {
         console.error('Error al cargar datos:', error);
         setError('Error al cargar datos iniciales');
@@ -46,67 +46,68 @@ export default function AddDishPage() {
 
   // app/admin/dishes/add/page.tsx (parte del handleSubmit)
 
-const handleSubmit = async (dishData: any) => {
-  setIsLoading(true);
-  setError(null);
-  
-  try {
-    console.log('📝 Datos del plato recibidos:', dishData);
-    
-    // Validar que tenemos categoría seleccionada
-    if (!dishData.categoryId) {
-      throw new Error('Debes seleccionar una categoría');
+  // src/app/admin/dishes/add/page.tsx
+  // (solo muestro la parte del handleSubmit que cambia)
+
+  const handleSubmit = async (dishData: any) => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      console.log('📝 Datos del plato recibidos:', dishData);
+
+      if (!dishData.categoryId) {
+        throw new Error('Debes seleccionar una categoría');
+      }
+
+      const selectedCategory = categories.find(c => c.id === dishData.categoryId);
+      if (!selectedCategory) {
+        throw new Error('Categoría seleccionada no encontrada');
+      }
+
+      // Preparar datos para guardar - INCLUYENDO dishType
+      const dishToSave = {
+        name: dishData.name.trim(),
+        description: dishData.description.trim(),
+        price: Number(dishData.price) || 0,
+        image: '', // string vacío
+        categoryId: dishData.categoryId,
+        categoryName: selectedCategory.name,
+        isAvailable: dishData.isAvailable ?? true,
+        isVegetarian: dishData.isVegetarian ?? false,
+        isSpicy: dishData.isSpicy ?? false,
+        preparationTime: Number(dishData.preparationTime) || 15,
+        ingredients: Array.isArray(dishData.ingredients)
+          ? dishData.ingredients
+          : (typeof dishData.ingredients === 'string' && dishData.ingredients
+            ? dishData.ingredients.split(',').map((i: string) => i.trim()).filter((i: string) => i)
+            : []),
+        dishType: dishData.dishType || 'normal', // ← NUEVO: guardar tipo de plato
+      };
+
+      console.log('💾 Guardando plato:', dishToSave);
+
+      const newDish = await dishService.addDish(dishToSave);
+
+      if (newDish) {
+        console.log('✅ Plato agregado exitosamente:', newDish);
+        setShowSuccess(true);
+        setTotalDishes(prev => prev + 1);
+
+        setTimeout(() => {
+          router.push('/admin/dishes');
+        }, 2000);
+      } else {
+        throw new Error('Error al agregar el plato');
+      }
+
+    } catch (error: any) {
+      console.error('❌ Error al agregar plato:', error);
+      setError(error.message || 'Error al agregar el plato. Intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
     }
-    
-    // Encontrar el nombre de la categoría seleccionada
-    const selectedCategory = categories.find(c => c.id === dishData.categoryId);
-    if (!selectedCategory) {
-      throw new Error('Categoría seleccionada no encontrada');
-    }
-    
-    // Preparar datos para guardar - INCLUYENDO image: ''
-    const dishToSave = {
-      name: dishData.name.trim(),
-      description: dishData.description.trim(),
-      price: Number(dishData.price) || 0,
-      image: '', // ← IMPORTANTE: string vacío para cumplir con la interfaz
-      categoryId: dishData.categoryId,
-      categoryName: selectedCategory.name,
-      isAvailable: dishData.isAvailable ?? true,
-      isVegetarian: dishData.isVegetarian ?? false,
-      isSpicy: dishData.isSpicy ?? false,
-      preparationTime: Number(dishData.preparationTime) || 15,
-      ingredients: Array.isArray(dishData.ingredients) 
-        ? dishData.ingredients 
-        : (typeof dishData.ingredients === 'string' && dishData.ingredients 
-          ? dishData.ingredients.split(',').map((i: string) => i.trim()).filter((i: string) => i) 
-          : []),
-      // No incluyas orderCount, createdAt, updatedAt porque el servicio los maneja
-    };
-    
-    console.log('💾 Guardando plato:', dishToSave);
-    
-    const newDish = await dishService.addDish(dishToSave);
-    
-    if (newDish) {
-      console.log('✅ Plato agregado exitosamente:', newDish);
-      setShowSuccess(true);
-      setTotalDishes(prev => prev + 1);
-      
-      setTimeout(() => {
-        router.push('/admin/dishes');
-      }, 2000);
-    } else {
-      throw new Error('Error al agregar el plato');
-    }
-    
-  } catch (error: any) {
-    console.error('❌ Error al agregar plato:', error);
-    setError(error.message || 'Error al agregar el plato. Intenta nuevamente.');
-  } finally {
-    setIsLoading(false);
-  }
-};
+  };
 
   const handleCancel = () => {
     router.push('/admin/dishes'); // ← Cambié a /admin/dishes en lugar de /
@@ -135,7 +136,7 @@ const handleSubmit = async (dishData: any) => {
                   </p>
                 </div>
               </div>
-              
+
               <div className="text-right">
                 <div className="text-sm font-medium text-gray-500">Total de platos</div>
                 <div className="text-2xl font-bold text-[#EC1F25]">

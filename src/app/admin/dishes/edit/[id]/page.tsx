@@ -27,29 +27,35 @@ export default function EditDishPage() {
   useEffect(() => {
     const loadData = async () => {
       if (!dishId) return;
-      
+
       setIsLoading(true);
       setError(null);
-      
+
       try {
         console.log('🔍 Cargando datos para editar plato:', dishId);
-        
-        // Cargar categorías y plato en paralelo para mayor eficiencia
+
         const [categoriesData, dishData] = await Promise.all([
           categoryService.getAllCategories(),
           dishService.getDishById(dishId)
         ]);
-        
+
         setCategories(categoriesData || []);
-        
+
         if (dishData) {
           console.log('✅ Plato cargado:', dishData);
+          console.log('✅ dishType recibido:', dishData.dishType); // ← VERIFICAR
+
+          // Asegurar que dishType tenga un valor por defecto
+          if (!dishData.dishType) {
+            dishData.dishType = 'normal';
+          }
+
           setDish(dishData);
         } else {
           setError('No se encontró el plato');
           setTimeout(() => router.push('/admin/dishes'), 2000);
         }
-        
+
       } catch (error: any) {
         console.error('❌ Error al cargar datos:', error);
         setError('Error al cargar los datos del plato');
@@ -60,67 +66,69 @@ export default function EditDishPage() {
 
     loadData();
   }, [dishId, router]);
+  // src/app/admin/dishes/edit/[id]/page.tsx
+  // (solo muestro la parte del handleSubmit que cambia)
 
   const handleSubmit = async (dishData: any) => {
     setIsSaving(true);
     setError(null);
-    
+
     try {
       console.log('📝 Actualizando plato:', dishId, dishData);
-      
-      // Validaciones
+
       if (!dishData.categoryId) {
         throw new Error('Debes seleccionar una categoría');
       }
-      
+
       const selectedCategory = categories.find(c => c.id === dishData.categoryId);
       if (!selectedCategory) {
         throw new Error('Categoría seleccionada no encontrada');
       }
-      
+
       if (!dishData.name?.trim()) {
         throw new Error('El nombre del plato es obligatorio');
       }
-      
+
       if (!dishData.price || dishData.price <= 0) {
         throw new Error('El precio debe ser mayor a 0');
       }
-      
-      // Preparar datos para actualizar - INCLUYENDO image (vacío o existente)
+
+      // Preparar datos para actualizar - INCLUYENDO dishType
       const dishToUpdate = {
         name: dishData.name.trim(),
         description: dishData.description?.trim() || '',
         price: Number(dishData.price) || 0,
-        image: dishData.image || '', // ← Mantener imagen existente o string vacío
+        image: dishData.image || '', // Mantener imagen existente
         categoryId: dishData.categoryId,
         categoryName: selectedCategory.name,
         isAvailable: dishData.isAvailable ?? true,
         isVegetarian: dishData.isVegetarian ?? false,
         isSpicy: dishData.isSpicy ?? false,
         preparationTime: Number(dishData.preparationTime) || 15,
-        ingredients: Array.isArray(dishData.ingredients) 
-          ? dishData.ingredients 
-          : (typeof dishData.ingredients === 'string' && dishData.ingredients 
-            ? dishData.ingredients.split(',').map((i: string) => i.trim()).filter((i: string) => i) 
+        ingredients: Array.isArray(dishData.ingredients)
+          ? dishData.ingredients
+          : (typeof dishData.ingredients === 'string' && dishData.ingredients
+            ? dishData.ingredients.split(',').map((i: string) => i.trim()).filter((i: string) => i)
             : []),
+        dishType: dishData.dishType || 'normal', // ← NUEVO: actualizar tipo de plato
         updatedAt: new Date(),
       };
-      
+
       console.log('💾 Actualizando plato:', dishToUpdate);
-      
+
       const success = await dishService.updateDish(dishId, dishToUpdate);
-      
+
       if (success) {
         console.log('✅ Plato actualizado exitosamente');
         setShowSuccess(true);
-        
+
         setTimeout(() => {
           router.push('/admin/dishes');
         }, 2000);
       } else {
         throw new Error('Error al actualizar el plato');
       }
-      
+
     } catch (error: any) {
       console.error('❌ Error al actualizar plato:', error);
       setError(error.message || 'Error al actualizar el plato. Intenta nuevamente.');
@@ -132,19 +140,19 @@ export default function EditDishPage() {
   const handleDelete = async () => {
     setIsDeleting(true);
     setError(null);
-    
+
     try {
       console.log('🗑️ Eliminando plato:', dishId);
-      
+
       const success = await dishService.deleteDish(dishId);
-      
+
       if (success) {
         console.log('✅ Plato eliminado exitosamente');
         router.push('/admin/dishes');
       } else {
         throw new Error('Error al eliminar el plato');
       }
-      
+
     } catch (error: any) {
       console.error('❌ Error al eliminar plato:', error);
       setError(error.message || 'Error al eliminar el plato');
@@ -219,7 +227,7 @@ export default function EditDishPage() {
                   </p>
                 </div>
               </div>
-              
+
               {/* Botón eliminar */}
               <button
                 onClick={() => setShowDeleteConfirm(true)}
@@ -283,16 +291,16 @@ export default function EditDishPage() {
                 <div className="w-20 h-20 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
                   <AlertCircle className="w-10 h-10 text-red-600" />
                 </div>
-                
+
                 <h3 className="text-2xl font-bold text-gray-900 text-center mb-2">
                   ¿Eliminar plato?
                 </h3>
-                
+
                 <p className="text-gray-600 text-center mb-6">
                   ¿Estás seguro de eliminar <span className="font-bold text-gray-900">"{dish?.name}"</span>?<br />
                   Esta acción <span className="text-red-600 font-semibold">no se puede deshacer</span>.
                 </p>
-                
+
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDeleteConfirm(false)}

@@ -3,14 +3,14 @@
 
 import { Dish, FilterOptions } from '@/types/menu.types';
 import { db } from '@/lib/firebase/config';
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
+import {
+  collection,
+  doc,
+  getDocs,
+  getDoc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
   query,
   orderBy,
   serverTimestamp,
@@ -25,10 +25,10 @@ export class DishService {
     try {
       console.log('🔍 Obteniendo platos de Firebase...');
       const q = query(collection(db, DISHES_COLLECTION), orderBy('createdAt', 'desc'));
-      
+
       const querySnapshot = await getDocs(q);
       const dishes: Dish[] = [];
-      
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         dishes.push({
@@ -46,10 +46,11 @@ export class DishService {
           isVegetarian: data.isVegetarian || false,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
-          orderCount: data.orderCount || 0
+          orderCount: data.orderCount || 0,
+          dishType: data.dishType || 'normal' // ← NUEVO: valor por defecto 'normal'
         } as Dish);
       });
-      
+
       console.log(`✅ ${dishes.length} platos cargados desde Firebase`);
       return dishes;
     } catch (error: any) {
@@ -59,13 +60,16 @@ export class DishService {
   }
 
   // Obtener plato por ID
+  // Obtener plato por ID
   async getDishById(id: string): Promise<Dish | null> {
     try {
       const docRef = doc(db, DISHES_COLLECTION, id);
       const docSnap = await getDoc(docRef);
-      
+
       if (docSnap.exists()) {
         const data = docSnap.data();
+        console.log('📦 Datos crudos de Firebase:', data); // ← VER ESTO
+
         return {
           id: docSnap.id,
           name: data.name || '',
@@ -81,10 +85,11 @@ export class DishService {
           isVegetarian: data.isVegetarian || false,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
-          orderCount: data.orderCount || 0
+          orderCount: data.orderCount || 0,
+          dishType: data.dishType || 'normal' // ← Forzar 'normal' si no existe
         } as Dish;
       }
-      
+
       return null;
     } catch (error: any) {
       console.error('❌ Error al obtener plato:', error.message);
@@ -92,7 +97,7 @@ export class DishService {
     }
   }
 
-  // NUEVO: Obtener platos por múltiples categorías
+  // Obtener platos por múltiples categorías
   async getDishesByCategories(categoryIds: string[]): Promise<Dish[]> {
     try {
       if (!categoryIds.length) {
@@ -101,21 +106,18 @@ export class DishService {
       }
 
       console.log('🔍 Obteniendo platos por categorías:', categoryIds);
-      
-      // Firestore 'in' soporta hasta 10 categorías por consulta
-      // Si hay más de 10, necesitamos hacer múltiples consultas
+
       if (categoryIds.length <= 10) {
-        // Consulta simple con 'in'
         const q = query(
           collection(db, DISHES_COLLECTION),
           where('categoryId', 'in', categoryIds),
           where('isAvailable', '==', true),
           orderBy('createdAt', 'desc')
         );
-        
+
         const querySnapshot = await getDocs(q);
         const dishes: Dish[] = [];
-        
+
         querySnapshot.forEach((doc) => {
           const data = doc.data();
           dishes.push({
@@ -133,22 +135,22 @@ export class DishService {
             isVegetarian: data.isVegetarian || false,
             createdAt: data.createdAt?.toDate() || new Date(),
             updatedAt: data.updatedAt?.toDate(),
-            orderCount: data.orderCount || 0
+            orderCount: data.orderCount || 0,
+            dishType: data.dishType || 'normal'
           } as Dish);
         });
-        
+
         console.log(`✅ ${dishes.length} platos encontrados en ${categoryIds.length} categorías`);
         return dishes;
       } else {
-        // Si hay más de 10 categorías, dividimos en lotes de 10
         console.log('📦 Más de 10 categorías, dividiendo en lotes...');
         const batches: string[][] = [];
         for (let i = 0; i < categoryIds.length; i += 10) {
           batches.push(categoryIds.slice(i, i + 10));
         }
-        
+
         let allDishes: Dish[] = [];
-        
+
         for (const batch of batches) {
           const q = query(
             collection(db, DISHES_COLLECTION),
@@ -156,7 +158,7 @@ export class DishService {
             where('isAvailable', '==', true),
             orderBy('createdAt', 'desc')
           );
-          
+
           const querySnapshot = await getDocs(q);
           querySnapshot.forEach((doc) => {
             const data = doc.data();
@@ -175,14 +177,14 @@ export class DishService {
               isVegetarian: data.isVegetarian || false,
               createdAt: data.createdAt?.toDate() || new Date(),
               updatedAt: data.updatedAt?.toDate(),
-              orderCount: data.orderCount || 0
+              orderCount: data.orderCount || 0,
+              dishType: data.dishType || 'normal'
             } as Dish);
           });
         }
-        
-        // Eliminar duplicados por si acaso (aunque no debería haber)
+
         const uniqueDishes = Array.from(new Map(allDishes.map(dish => [dish.id, dish])).values());
-        
+
         console.log(`✅ ${uniqueDishes.length} platos encontrados en ${categoryIds.length} categorías (${batches.length} lotes)`);
         return uniqueDishes;
       }
@@ -196,12 +198,11 @@ export class DishService {
   async addDish(dishData: Omit<Dish, 'id' | 'createdAt' | 'updatedAt'>): Promise<Dish | null> {
     try {
       console.log('➕ Intentando agregar plato:', dishData);
-      
-      // Validar que tengamos los datos necesarios
+
       if (!dishData.name || !dishData.categoryId) {
         throw new Error('Faltan datos requeridos: nombre y categoría');
       }
-      
+
       const dishToSave = {
         name: dishData.name.trim(),
         description: (dishData.description || '').trim(),
@@ -215,16 +216,17 @@ export class DishService {
         preparationTime: dishData.preparationTime || 15,
         ingredients: dishData.ingredients || [],
         orderCount: 0,
+        dishType: dishData.dishType || 'normal', // ← NUEVO: guardar tipo de plato
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
-      
+
       console.log('📤 Datos a guardar en Firebase:', dishToSave);
-      
+
       const docRef = await addDoc(collection(db, DISHES_COLLECTION), dishToSave);
-      
+
       console.log('✅ Plato creado con ID:', docRef.id);
-      
+
       return {
         id: docRef.id,
         ...dishData,
@@ -242,12 +244,12 @@ export class DishService {
   async updateDish(id: string, updates: Partial<Dish>): Promise<boolean> {
     try {
       const docRef = doc(db, DISHES_COLLECTION, id);
-      
+
       await updateDoc(docRef, {
         ...updates,
         updatedAt: serverTimestamp(),
       });
-      
+
       console.log('✅ Plato actualizado:', id);
       return true;
     } catch (error: any) {
@@ -291,15 +293,15 @@ export class DishService {
       console.log('🔍 Buscando platos:', queryText);
       const allDishes = await this.getAllDishes();
       const lowerQuery = queryText.toLowerCase();
-      
+
       const results = allDishes.filter(dish =>
         dish.name.toLowerCase().includes(lowerQuery) ||
         dish.description.toLowerCase().includes(lowerQuery) ||
-        dish.ingredients?.some(ingredient => 
+        dish.ingredients?.some(ingredient =>
           ingredient.toLowerCase().includes(lowerQuery)
         )
       );
-      
+
       console.log(`✅ ${results.length} resultados encontrados`);
       return results;
     } catch (error: any) {
@@ -318,10 +320,10 @@ export class DishService {
         where('isAvailable', '==', true),
         orderBy('createdAt', 'desc')
       );
-      
+
       const querySnapshot = await getDocs(q);
       const dishes: Dish[] = [];
-      
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         dishes.push({
@@ -339,10 +341,11 @@ export class DishService {
           isVegetarian: data.isVegetarian || false,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
-          orderCount: data.orderCount || 0
+          orderCount: data.orderCount || 0,
+          dishType: data.dishType || 'normal'
         } as Dish);
       });
-      
+
       console.log(`✅ ${dishes.length} platos encontrados en categoría ${categoryId}`);
       return dishes;
     } catch (error: any) {
@@ -355,24 +358,23 @@ export class DishService {
   async filterDishes(options: FilterOptions): Promise<Dish[]> {
     try {
       console.log('🔍 Filtrando platos con opciones:', options);
-      
+
       let q = query(collection(db, DISHES_COLLECTION));
       const conditions = [];
-      
-      // Filtrar por disponibilidad por defecto
+
       conditions.push(where('isAvailable', '==', true));
-      
+
       if (options.categoryId) {
         conditions.push(where('categoryId', '==', options.categoryId));
       }
-      
+
       if (conditions.length > 0) {
         q = query(collection(db, DISHES_COLLECTION), ...conditions);
       }
-      
+
       const querySnapshot = await getDocs(q);
       const dishes: Dish[] = [];
-      
+
       querySnapshot.forEach((doc) => {
         const data = doc.data();
         const dish: Dish = {
@@ -390,34 +392,33 @@ export class DishService {
           isVegetarian: data.isVegetarian || false,
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
-          orderCount: data.orderCount || 0
+          orderCount: data.orderCount || 0,
+          dishType: data.dishType || 'normal'
         };
-        
-        // Aplicar filtros adicionales en memoria
+
         let include = true;
-        
+
         if (options.isVegetarian !== undefined && dish.isVegetarian !== options.isVegetarian) {
           include = false;
         }
-        
+
         if (options.isSpicy !== undefined && dish.isSpicy !== options.isSpicy) {
           include = false;
         }
-        
+
         if (options.minPrice !== undefined && dish.price < options.minPrice) {
           include = false;
         }
-        
+
         if (options.maxPrice !== undefined && dish.price > options.maxPrice) {
           include = false;
         }
-        
+
         if (include) {
           dishes.push(dish);
         }
       });
-      
-      // Ordenar
+
       if (options.sortBy) {
         dishes.sort((a, b) => {
           if (options.sortBy === 'name') {
@@ -431,12 +432,12 @@ export class DishService {
           }
           return 0;
         });
-        
+
         if (options.sortOrder === 'desc' && options.sortBy !== 'popular' && options.sortBy !== 'newest') {
           dishes.reverse();
         }
       }
-      
+
       console.log(`✅ ${dishes.length} platos filtrados`);
       return dishes;
     } catch (error: any) {
@@ -450,22 +451,18 @@ export class DishService {
     try {
       console.log('🔍 Obteniendo platos recomendados');
       const allDishes = await this.getAllDishes();
-      
-      // Filtrar platos disponibles
+
       const availableDishes = allDishes.filter(dish => dish.isAvailable);
-      
-      // Ordenar por popularidad (orderCount) y luego por los más nuevos
+
       const recommended = availableDishes
         .sort((a, b) => {
-          // Primero por popularidad
           const popularityDiff = (b.orderCount || 0) - (a.orderCount || 0);
           if (popularityDiff !== 0) return popularityDiff;
-          
-          // Luego por más nuevos
+
           return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         })
         .slice(0, limit);
-      
+
       console.log(`✅ ${recommended.length} platos recomendados encontrados`);
       return recommended;
     } catch (error: any) {
@@ -474,12 +471,12 @@ export class DishService {
     }
   }
 
-  // Obtener categorías de platos (útil para contadores)
-  async getCategoriesFromDishes(): Promise<Array<{id: string, name: string, count: number}>> {
+  // Obtener categorías de platos
+  async getCategoriesFromDishes(): Promise<Array<{ id: string, name: string, count: number }>> {
     try {
       const allDishes = await this.getAllDishes();
       const categories = new Map();
-      
+
       allDishes.forEach(dish => {
         if (!categories.has(dish.categoryId)) {
           categories.set(dish.categoryId, {
@@ -491,7 +488,7 @@ export class DishService {
           categories.get(dish.categoryId).count++;
         }
       });
-      
+
       return Array.from(categories.values());
     } catch (error: any) {
       console.error('❌ Error al obtener categorías de platos:', error.message);

@@ -6,6 +6,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import DishGrid from './DishGrid';
 
+// Definir interfaces primero
 interface User {
   id: string;
   role: 'admin' | 'user';
@@ -41,6 +42,7 @@ interface Dish {
   createdAt?: Date;
   updatedAt?: Date;
   orderCount?: number;
+  dishType?: 'sopa' | 'menu' | 'normal'; // ← AGREGAR ESTO
 }
 
 interface MenuHeaderProps {
@@ -76,8 +78,8 @@ export default function MenuHeader({
 
   // Filtrar solo categorías activas y ordenadas
   const activeCategories = categories
-    .filter(cat => cat.isActive)
-    .sort((a, b) => (a.order || 0) - (b.order || 0));
+    .filter((cat: Category) => cat.isActive)
+    .sort((a: Category, b: Category) => (a.order || 0) - (b.order || 0));
 
   // Obtener categoría actual
   const currentCategory = activeCategories[currentCategoryIndex];
@@ -85,8 +87,8 @@ export default function MenuHeader({
   // Obtener platos de la categoría actual con todas las propiedades necesarias
   const currentCategoryDishes = currentCategory 
     ? dishes
-        .filter(dish => dish.categoryId === currentCategory.id && dish.isAvailable !== false)
-        .map(dish => ({
+        .filter((dish: Dish) => dish.categoryId === currentCategory.id && dish.isAvailable !== false)
+        .map((dish: Dish) => ({
           id: dish.id,
           name: dish.name,
           description: dish.description || '',
@@ -101,27 +103,68 @@ export default function MenuHeader({
           ingredients: Array.isArray(dish.ingredients) ? dish.ingredients : [],
           createdAt: dish.createdAt || new Date(),
           updatedAt: dish.updatedAt,
-          orderCount: dish.orderCount || 0
+          orderCount: dish.orderCount || 0,
+          dishType: dish.dishType || 'normal' // ← FORZAR 'normal' SI NO EXISTE
         }))
     : [];
 
   // Obtener imágenes de la categoría (máximo 2)
   const categoryImages = currentCategory?.images?.slice(0, 2) || [];
 
-  // Función de respaldo para cuando no se proporcionan manejadores
+  // Función para manejar el pedido (para delivery)
   const handleOrder = (dish: Dish) => {
     if (onOrder) {
       onOrder(dish);
     } else {
-      console.log('Ordenando:', dish.name);
+      // Si no hay onOrder, agregar al carrito directamente
+      addToCartDirectly(dish);
     }
   };
 
+  // Función para manejar delivery
   const handleDelivery = (dish: Dish) => {
     if (onDelivery) {
       onDelivery(dish);
     } else {
-      console.log('Delivery:', dish.name);
+      // Si no hay onDelivery, agregar al carrito directamente
+      addToCartDirectly(dish);
+    }
+  };
+
+  // Función para agregar directamente al carrito (cuando no hay handlers)
+  const addToCartDirectly = (dish: Dish) => {
+    try {
+      const savedCart = localStorage.getItem('cart');
+      let cart = savedCart ? JSON.parse(savedCart) : [];
+      
+      const existingItemIndex = cart.findIndex((item: any) => item.dishId === dish.id);
+      
+      console.log('🍽️ Agregando desde MenuHeader:', {
+        name: dish.name,
+        dishType: dish.dishType || 'normal'
+      });
+      
+      if (existingItemIndex !== -1) {
+        cart[existingItemIndex].quantity += 1;
+      } else {
+        cart.push({
+          dishId: dish.id,
+          dishName: dish.name,
+          price: dish.price,
+          quantity: 1,
+          image: dish.image || '/placeholder.jpg',
+          categoryName: dish.categoryName,
+          description: dish.description,
+          preparationTime: dish.preparationTime,
+          dishType: dish.dishType || 'normal' // ← ¡NUEVO! Incluir dishType
+        });
+      }
+      
+      localStorage.setItem('cart', JSON.stringify(cart));
+      window.dispatchEvent(new Event('cartUpdated'));
+      alert(`✅ "${dish.name}" agregado al carrito`);
+    } catch (error) {
+      console.error('Error al agregar al carrito:', error);
     }
   };
 
@@ -169,7 +212,7 @@ export default function MenuHeader({
             <div className="flex items-center gap-3">
               {/* Barra de progreso */}
               <div className="flex items-center gap-1">
-                {activeCategories.map((cat, idx) => (
+                {activeCategories.map((cat: Category, idx: number) => (
                   <button
                     key={cat.id}
                     onClick={() => {
@@ -257,7 +300,7 @@ export default function MenuHeader({
                     Galería de {currentCategory.name}
                   </h2>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {categoryImages.map((img, index) => (
+                    {categoryImages.map((img: string, index: number) => (
                       <div 
                         key={index}
                         className="relative rounded-xl overflow-hidden shadow-lg group"
@@ -284,11 +327,10 @@ export default function MenuHeader({
                   Nuestros Platos
                 </h2>
                 
-                {/* ✅ AHORA SÍ FUNCIONA - Pasamos los manejadores correctamente */}
                 <DishGrid
                   dishes={currentCategoryDishes}
-                  onOrder={handleOrder}      // ← Usamos las funciones de respaldo
-                  onDelivery={handleDelivery} // ← Usamos las funciones de respaldo
+                  onOrder={handleOrder}
+                  onDelivery={handleDelivery}
                   showAdminActions={showAdminActions}
                   onEditDish={onEditDish}
                   onDeleteDish={onDeleteDish}
@@ -323,5 +365,5 @@ export default function MenuHeader({
         </div>
       )}
     </div>
-  );
+  ); 
 }
