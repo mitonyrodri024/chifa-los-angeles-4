@@ -1,7 +1,7 @@
 // src/components/menu/MenuHeader.tsx
 'use client';
 
-import { Plus, Tag, ArrowRight, Image as ImageIcon } from 'lucide-react';
+import { Plus, Tag, ArrowRight, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useState } from 'react';
 import Image from 'next/image';
 import DishGrid from './DishGrid';
@@ -23,7 +23,7 @@ interface Category {
   dishCount: number;
   isActive: boolean;
   order?: number;
-  images?: string[];
+  images?: string[]; // ← Array de imágenes Base64
 }
 
 interface Dish {
@@ -42,7 +42,7 @@ interface Dish {
   createdAt?: Date;
   updatedAt?: Date;
   orderCount?: number;
-  dishType?: 'sopa' | 'menu' | 'normal'; // ← AGREGAR ESTO
+  dishType?: 'sopa' | 'menu' | 'normal';
 }
 
 interface MenuHeaderProps {
@@ -104,19 +104,18 @@ export default function MenuHeader({
           createdAt: dish.createdAt || new Date(),
           updatedAt: dish.updatedAt,
           orderCount: dish.orderCount || 0,
-          dishType: dish.dishType || 'normal' // ← FORZAR 'normal' SI NO EXISTE
+          dishType: dish.dishType || 'normal'
         }))
     : [];
 
-  // Obtener imágenes de la categoría (máximo 2)
-  const categoryImages = currentCategory?.images?.slice(0, 2) || [];
+  // Obtener imágenes de la categoría
+  const categoryImages = currentCategory?.images || [];
 
   // Función para manejar el pedido (para delivery)
   const handleOrder = (dish: Dish) => {
     if (onOrder) {
       onOrder(dish);
     } else {
-      // Si no hay onOrder, agregar al carrito directamente
       addToCartDirectly(dish);
     }
   };
@@ -126,23 +125,17 @@ export default function MenuHeader({
     if (onDelivery) {
       onDelivery(dish);
     } else {
-      // Si no hay onDelivery, agregar al carrito directamente
       addToCartDirectly(dish);
     }
   };
 
-  // Función para agregar directamente al carrito (cuando no hay handlers)
+  // Función para agregar directamente al carrito
   const addToCartDirectly = (dish: Dish) => {
     try {
       const savedCart = localStorage.getItem('cart');
       let cart = savedCart ? JSON.parse(savedCart) : [];
       
       const existingItemIndex = cart.findIndex((item: any) => item.dishId === dish.id);
-      
-      console.log('🍽️ Agregando desde MenuHeader:', {
-        name: dish.name,
-        dishType: dish.dishType || 'normal'
-      });
       
       if (existingItemIndex !== -1) {
         cart[existingItemIndex].quantity += 1;
@@ -156,7 +149,7 @@ export default function MenuHeader({
           categoryName: dish.categoryName,
           description: dish.description,
           preparationTime: dish.preparationTime,
-          dishType: dish.dishType || 'normal' // ← ¡NUEVO! Incluir dishType
+          dishType: dish.dishType || 'normal'
         });
       }
       
@@ -170,7 +163,7 @@ export default function MenuHeader({
 
   return (
     <div className="mb-6 md:mb-10">
-      {/* Botones admin móvil - SOLO si hay usuario admin */}
+      {/* Botones admin móvil */}
       {user?.role === 'admin' && (
         <div className="md:hidden flex gap-2 mb-6">
           <a
@@ -256,7 +249,7 @@ export default function MenuHeader({
           {currentCategory && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden mb-8">
               
-              {/* Header de categoría - NOMBRE y DESCRIPCIÓN */}
+              {/* Header de categoría */}
               <div 
                 className="p-6 border-b border-gray-200"
                 style={{ backgroundColor: `${currentCategory.color || '#EC1F25'}10` }}
@@ -292,36 +285,38 @@ export default function MenuHeader({
                 </div>
               </div>
 
-              {/* SECCIÓN DE IMÁGENES DE LA CATEGORÍA - 2 IMÁGENES */}
+              {/* ✅ SECCIÓN DE  DE LA CATEGORÍA - EN CUADRÍCULA */}
               {categoryImages.length > 0 && (
-                <div className="p-6 border-b border-gray-200 bg-gray-50">
-                  <h2 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <ImageIcon className="w-5 h-5 text-gray-600" />
-                    Galería de {currentCategory.name}
-                  </h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="p-6 border-b border-gray-200">
+                                    
+                  {/* Grid de  responsive: 2 columnas en móvil, 4 en desktop */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                     {categoryImages.map((img: string, index: number) => (
                       <div 
                         key={index}
-                        className="relative rounded-xl overflow-hidden shadow-lg group"
-                        style={{ height: '280px' }}
+                        className="relative aspect-square rounded-xl overflow-hidden shadow-md group cursor-pointer hover:shadow-lg transition-all hover:scale-105"
                       >
                         <Image
                           src={img}
                           alt={`${currentCategory.name} - imagen ${index + 1}`}
                           fill
-                          className="object-cover group-hover:scale-105 transition-transform duration-500"
-                          sizes="(max-width: 768px) 100vw, 50vw"
-                          priority={index === 0}
+                          className="object-cover group-hover:scale-110 transition-transform duration-300"
+                          sizes="(max-width: 768px) 50vw, 25vw"
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        {/* Overlay en hover */}
+                        <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
+                          <span className="text-white text-sm font-medium bg-black/50 px-2 py-1 rounded-full">
+                            {index + 1}/{categoryImages.length}
+                          </span>
+                        </div>
                       </div>
                     ))}
                   </div>
+                  
                 </div>
               )}
 
-              {/* SECCIÓN DE PLATOS - GRID DE 4 COLUMNAS EN PANTALLAS GRANDES */}
+              {/* SECCIÓN DE PLATOS */}
               <div className="p-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Nuestros Platos
@@ -349,21 +344,6 @@ export default function MenuHeader({
           )}
         </>
       )}
-
-      {/* Mensaje si no hay categorías activas */}
-      {activeCategories.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-xl shadow border border-gray-200">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-            <span className="text-2xl">📂</span>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
-            No hay categorías disponibles
-          </h3>
-          <p className="text-gray-600">
-            Pronto tendremos nuevas categorías en nuestro menú.
-          </p>
-        </div>
-      )}
     </div>
-  ); 
+  );
 }

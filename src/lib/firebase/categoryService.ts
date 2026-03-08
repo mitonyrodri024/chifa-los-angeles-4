@@ -1,3 +1,4 @@
+// lib/firebase/categoryService.ts
 'use client';
 
 import { Category } from '@/types/menu.types';
@@ -22,7 +23,7 @@ export class CategoryService {
   // Obtener todas las categorías
   async getAllCategories(): Promise<Category[]> {
     try {
-      console.log('Obteniendo categorías...');
+      console.log('📦 Obteniendo categorías desde Firebase...');
       const q = query(collection(db, CATEGORIES_COLLECTION));
       
       const querySnapshot = await getDocs(q);
@@ -30,7 +31,11 @@ export class CategoryService {
       
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        console.log('Categoría encontrada:', doc.id, data);
+        console.log(`📁 Categoría encontrada: ${doc.id}`, {
+          name: data.name,
+          imagesCount: data.images?.length || 0,
+          hasImages: !!data.images
+        });
         
         categories.push({
           id: doc.id,
@@ -41,6 +46,7 @@ export class CategoryService {
           icon: data.icon || '🍽️',
           color: data.color || '#DC2626',
           order: data.order || 0,
+          images: data.images || [], // ✅ CAMPO IMAGES AGREGADO AQUÍ
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
         });
@@ -49,7 +55,7 @@ export class CategoryService {
       // Ordenar por order
       return categories.sort((a, b) => (a.order || 0) - (b.order || 0));
     } catch (error) {
-      console.error('Error al obtener categorías:', error);
+      console.error('❌ Error al obtener categorías:', error);
       return [];
     }
   }
@@ -62,7 +68,7 @@ export class CategoryService {
         .filter(category => category.isActive)
         .sort((a, b) => (a.order || 0) - (b.order || 0));
     } catch (error) {
-      console.error('Error al obtener categorías activas:', error);
+      console.error('❌ Error al obtener categorías activas:', error);
       return [];
     }
   }
@@ -75,6 +81,11 @@ export class CategoryService {
       
       if (docSnap.exists()) {
         const data = docSnap.data();
+        console.log(`📁 Categoría por ID ${id}:`, {
+          name: data.name,
+          imagesCount: data.images?.length || 0
+        });
+        
         return {
           id: docSnap.id,
           name: data.name || '',
@@ -84,6 +95,7 @@ export class CategoryService {
           icon: data.icon || '🍽️',
           color: data.color || '#DC2626',
           order: data.order || 0,
+          images: data.images || [], // ✅ CAMPO IMAGES AGREGADO AQUÍ
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
         };
@@ -91,7 +103,7 @@ export class CategoryService {
       
       return null;
     } catch (error) {
-      console.error('Error al obtener categoría:', error);
+      console.error('❌ Error al obtener categoría:', error);
       return null;
     }
   }
@@ -101,14 +113,12 @@ export class CategoryService {
     try {
       const categories = await this.getAllCategories();
       
-      // Para obtener el conteo de platos, necesitaríamos importar dishService
-      // Pero para evitar dependencia circular, manejaremos esto en la página
       return categories.map(category => ({
         ...category,
         dishCount: category.dishCount || 0,
       }));
     } catch (error) {
-      console.error('Error al obtener categorías con conteo:', error);
+      console.error('❌ Error al obtener categorías con conteo:', error);
       return [];
     }
   }
@@ -116,7 +126,10 @@ export class CategoryService {
   // Agregar nueva categoría
   async addCategory(categoryData: Omit<Category, 'id' | 'dishCount' | 'createdAt' | 'updatedAt'>): Promise<Category | null> {
     try {
-      console.log('Intentando agregar categoría:', categoryData);
+      console.log('➕ Intentando agregar categoría:', {
+        name: categoryData.name,
+        imagesCount: categoryData.images?.length || 0
+      });
       
       // Obtener el siguiente orden
       const categories = await this.getAllCategories();
@@ -132,15 +145,19 @@ export class CategoryService {
         icon: categoryData.icon || '🍽️',
         color: categoryData.color || '#DC2626',
         order: maxOrder + 1,
+        images: categoryData.images || [], // ✅ GUARDAR IMÁGENES
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
       
-      console.log('Datos a guardar:', categoryToSave);
+      console.log('📤 Datos a guardar:', {
+        name: categoryToSave.name,
+        imagesCount: categoryToSave.images.length
+      });
       
       const docRef = await addDoc(collection(db, CATEGORIES_COLLECTION), categoryToSave);
       
-      console.log('Categoría creada con ID:', docRef.id);
+      console.log('✅ Categoría creada con ID:', docRef.id);
       
       return {
         id: docRef.id,
@@ -151,7 +168,7 @@ export class CategoryService {
         updatedAt: new Date(),
       };
     } catch (error: any) {
-      console.error('Error al agregar categoría:', error);
+      console.error('❌ Error al agregar categoría:', error);
       console.error('Error details:', error.message, error.stack);
       return null;
     }
@@ -162,14 +179,21 @@ export class CategoryService {
     try {
       const docRef = doc(db, CATEGORIES_COLLECTION, id);
       
+      console.log(`✏️ Actualizando categoría ${id}:`, {
+        updates: Object.keys(updates),
+        hasImages: 'images' in updates,
+        imagesCount: updates.images?.length || 0
+      });
+      
       await updateDoc(docRef, {
         ...updates,
         updatedAt: serverTimestamp(),
       });
       
+      console.log('✅ Categoría actualizada');
       return true;
     } catch (error) {
-      console.error('Error al actualizar categoría:', error);
+      console.error('❌ Error al actualizar categoría:', error);
       return false;
     }
   }
@@ -197,7 +221,7 @@ export class CategoryService {
       
       return { success: true, message: 'Categoría eliminada exitosamente' };
     } catch (error) {
-      console.error('Error al eliminar categoría:', error);
+      console.error('❌ Error al eliminar categoría:', error);
       return { success: false, message: 'Error al eliminar la categoría' };
     }
   }
@@ -210,7 +234,7 @@ export class CategoryService {
       
       return await this.updateCategory(id, { isActive: !category.isActive });
     } catch (error) {
-      console.error('Error al cambiar estado de categoría:', error);
+      console.error('❌ Error al cambiar estado de categoría:', error);
       return false;
     }
   }
@@ -229,9 +253,10 @@ export class CategoryService {
       });
       
       await batch.commit();
+      console.log('✅ Categorías reordenadas');
       return true;
     } catch (error) {
-      console.error('Error al reordenar categorías:', error);
+      console.error('❌ Error al reordenar categorías:', error);
       return false;
     }
   }
@@ -253,8 +278,9 @@ export class CategoryService {
       });
       
       await batch.commit();
+      console.log('✅ Categorías reordenadas después de eliminar');
     } catch (error) {
-      console.error('Error al reordenar después de eliminar:', error);
+      console.error('❌ Error al reordenar después de eliminar:', error);
     }
   }
 
@@ -267,7 +293,7 @@ export class CategoryService {
         await this.updateCategory(categoryId, { dishCount: Math.max(0, newCount) });
       }
     } catch (error) {
-      console.error('Error al actualizar contador de categoría:', error);
+      console.error('❌ Error al actualizar contador de categoría:', error);
     }
   }
 }

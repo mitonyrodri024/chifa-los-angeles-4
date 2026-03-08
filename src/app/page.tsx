@@ -2,7 +2,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Utensils, Phone, MapPin } from 'lucide-react';
 
 export default function HomePage() {
   const router = useRouter();
@@ -29,15 +29,30 @@ export default function HomePage() {
         {/* Contenido principal */}
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
 
-          {/* Título decorativo */}
-          <div className="text-center mb-12">
+          {/* Título decorativo - SOLO EL LOGO */}
+          <div className="text-center mb-8">
             <div className="inline-flex items-center gap-4">
               <img
                 src="/logo/logo.png"
                 alt="Logo"
-                className="w-32 h-32 object-contain"
+                className="w-28 h-28 md:w-32 md:h-32 object-contain"
               />              
             </div>
+          </div>
+
+          {/* BOTONES DE ACCESO AL MENÚ - Justo después del logo */}
+          <div className="flex flex-col items-center gap-4 mb-12">
+            {/* Botón principal - VER MENÚ COMPLETO */}
+            <button
+              onClick={() => router.push('/menu')}
+              className="px-8 py-4 md:px-12 md:py-6 bg-yellow-400 hover:bg-yellow-500 text-red-700 font-bold rounded-xl text-xl md:text-2xl transition-all hover:scale-105 shadow-2xl inline-flex items-center gap-3 md:gap-4 group w-full max-w-2xl justify-center"
+            >
+              <Utensils className="w-6 h-6 md:w-8 md:h-8 group-hover:rotate-12 transition-transform" />
+              <span>VER MENÚ COMPLETO</span>
+              <ArrowRight className="w-6 h-6 md:w-8 md:h-8 group-hover:translate-x-2 transition-transform" />
+            </button>
+            
+            
           </div>
 
           {/* Texto de Nuestra Historia */}
@@ -85,14 +100,74 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Botón de llamado a la acción */}
-            <div className="flex justify-center pt-12">
+            {/* SECCIÓN DE CONTACTO - Teléfonos y dirección */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mt-8 border-2 border-yellow-400/30">
+              
+              {/* Título de la sección */}
+              <h2 className="text-3xl font-bold text-center mb-6 text-yellow-300">
+                Contáctanos
+              </h2>
+              
+              {/* Descripción */}
+              <p className="text-center text-white/90 text-lg mb-8 max-w-2xl mx-auto">
+                Estamos ubicados en Cajamarca con 4 locales a tu disposición. 
+                Realiza tus pedidos o consultas a nuestros números:
+              </p>
+
+              {/* Grid de teléfonos y dirección */}
+              <div className="grid md:grid-cols-3 gap-6">
+                
+                {/* Teléfono 1 */}
+                <div className="bg-white/5 rounded-xl p-6 text-center hover:bg-white/10 transition-all group border border-white/10 hover:border-yellow-400/50">
+                  <div className="bg-yellow-400/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Phone className="w-8 h-8 text-yellow-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-2xl font-bold text-yellow-400">976 393 071</p>
+                    <p className="text-sm text-white/70">Pedidos y delivery</p>
+                  </div>
+                </div>
+
+                {/* Teléfono 2 */}
+                <div className="bg-white/5 rounded-xl p-6 text-center hover:bg-white/10 transition-all group border border-white/10 hover:border-yellow-400/50">
+                  <div className="bg-yellow-400/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <Phone className="w-8 h-8 text-yellow-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-2xl font-bold text-yellow-400">976 393 072</p>
+                    <p className="text-sm text-white/70">Reservas y eventos</p>
+                  </div>
+                </div>
+
+                {/* Dirección */}
+                <div className="bg-white/5 rounded-xl p-6 text-center hover:bg-white/10 transition-all group border border-white/10 hover:border-yellow-400/50">
+                  <div className="bg-yellow-400/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                    <MapPin className="w-8 h-8 text-yellow-400" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-xl font-bold text-white">Jr. Independencia 456</p>
+                    <p className="text-sm text-white/70">Cajamarca - Perú</p>
+                    
+                  </div>
+                </div>
+              </div>
+
+              {/* Horario de atención */}
+              <div className="mt-8 text-center text-white/80 border-t border-white/20 pt-6">
+                <p className="inline-flex items-center gap-2 bg-white/5 px-6 py-3 rounded-full">
+                  <span className="text-yellow-400 font-semibold">🕒 Atención:</span>
+                  Lunes a Domingo 11:00 am - 11:00 pm
+                </p>
+              </div>
+            </div>
+
+            {/* Botón flotante inferior (visible en móvil) */}
+            <div className="md:hidden fixed bottom-6 right-6 z-50">
               <button
                 onClick={() => router.push('/menu')}
-                className="px-10 py-5 bg-yellow-400 hover:bg-yellow-500 text-red-700 font-bold rounded-xl text-xl transition-all hover:scale-105 shadow-2xl inline-flex items-center gap-3 group"
+                className="w-16 h-16 bg-yellow-400 hover:bg-yellow-500 text-red-700 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 group"
               >
-                <span>Explorar nuestro menú</span>
-                <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                <Utensils className="w-8 h-8" />
               </button>
             </div>
 

@@ -10,7 +10,8 @@ import { categoryService } from '@/lib/firebase/categoryService';
 import { dishService } from '@/lib/firebase/dishService';
 import { 
   ArrowLeft, Plus, Edit2, Trash2, Eye, EyeOff, Check, X, 
-  ChevronUp, ChevronDown, RefreshCw, Image as ImageIcon 
+  ChevronUp, ChevronDown, RefreshCw, Image as ImageIcon,
+  ChevronLeft, ChevronRight
 } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -173,11 +174,41 @@ export default function CategoriesPage() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const category = categories.find(c => c.id === categoryId);
     
-    // ✅ Verificaciones de seguridad
+    // Verificaciones de seguridad
     if (!categoryId || !category) return null;
-    if (!category.images || category.images.length === 0) return null;
     
-    const images = category.images;
+    const images = category.images || [];
+    if (images.length === 0) {
+      // Si no hay imágenes, mostrar mensaje
+      return (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" 
+          onClick={onClose}
+        >
+          <div 
+            className="relative max-w-md w-full bg-white rounded-xl overflow-hidden" 
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6 text-center">
+              <ImageIcon className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {category.name}
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Esta categoría no tiene imágenes
+              </p>
+              <button
+                onClick={onClose}
+                className="px-6 py-2 bg-[#EC1F25] text-white rounded-lg hover:bg-red-700"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     const currentImage = images[currentIndex];
     
     return (
@@ -191,9 +222,14 @@ export default function CategoriesPage() {
         >
           {/* Header */}
           <div className="p-4 bg-gray-100 border-b border-gray-200 flex justify-between items-center">
-            <h3 className="font-bold text-gray-900">
-              {category.name} - {images.length} {images.length === 1 ? 'imagen' : 'imágenes'}
-            </h3>
+            <div>
+              <h3 className="font-bold text-gray-900">
+                {category.name}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {images.length} {images.length === 1 ? 'imagen' : 'imágenes'}
+              </p>
+            </div>
             <button 
               onClick={onClose} 
               className="p-1 hover:bg-gray-200 rounded-full transition-colors"
@@ -219,14 +255,14 @@ export default function CategoriesPage() {
                   disabled={currentIndex === 0}
                   className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <ChevronUp className="w-6 h-6 rotate-90" />
+                  <ChevronLeft className="w-6 h-6" />
                 </button>
                 <button
                   onClick={() => setCurrentIndex(prev => Math.min(images.length - 1, prev + 1))}
                   disabled={currentIndex === images.length - 1}
                   className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 text-white p-2 rounded-full hover:bg-black/70 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
                 >
-                  <ChevronDown className="w-6 h-6 rotate-90" />
+                  <ChevronRight className="w-6 h-6" />
                 </button>
                 <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 bg-black/50 text-white px-3 py-1 rounded-full text-sm">
                   {currentIndex + 1} / {images.length}
@@ -236,24 +272,26 @@ export default function CategoriesPage() {
           </div>
           
           {/* Miniaturas */}
-          <div className="p-4 bg-gray-100 grid grid-cols-5 gap-2">
-            {images.map((img, idx) => (
-              <div
-                key={idx}
-                className={`relative h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
-                  idx === currentIndex ? 'border-[#EC1F25] scale-105' : 'border-transparent hover:scale-105'
-                }`}
-                onClick={() => setCurrentIndex(idx)}
-              >
-                <Image
-                  src={img}
-                  alt={`miniatura ${idx + 1}`}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-            ))}
-          </div>
+          {images.length > 1 && (
+            <div className="p-4 bg-gray-100 grid grid-cols-5 gap-2">
+              {images.map((img, idx) => (
+                <div
+                  key={idx}
+                  className={`relative h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
+                    idx === currentIndex ? 'border-[#EC1F25] scale-105' : 'border-transparent hover:scale-105'
+                  }`}
+                  onClick={() => setCurrentIndex(idx)}
+                >
+                  <Image
+                    src={img}
+                    alt={`miniatura ${idx + 1}`}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -376,7 +414,7 @@ export default function CategoriesPage() {
             </div>
           )}
 
-          {/* Modal de imágenes - VERSIÓN CORREGIDA */}
+          {/* Modal de imágenes */}
           <ImageViewerModal
             categoryId={selectedImageCategory}
             onClose={() => setSelectedImageCategory(null)}
@@ -457,7 +495,7 @@ export default function CategoriesPage() {
   );
 }
 
-// Componente de tarjeta de categoría (separado para mejor organización)
+// Componente de tarjeta de categoría (MEJORADO PARA MOSTRAR MÚLTIPLES IMÁGENES)
 function CategoryCard({ 
   category, 
   index,
@@ -481,6 +519,9 @@ function CategoryCard({
   onReorder: (direction: 'up' | 'down') => void;
   onViewImages: () => void;
 }) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const images = category.images || [];
+
   return (
     <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
       {/* Header con color */}
@@ -524,34 +565,102 @@ function CategoryCard({
           <p className="text-gray-600 text-sm mb-4 line-clamp-2">{category.description}</p>
         )}
 
-        {/* Miniaturas de imágenes */}
-        {category.images && category.images.length > 0 && (
+        {/* SECCIÓN DE MÚLTIPLES IMÁGENES MEJORADA */}
+        {images.length > 0 ? (
           <div className="mb-4">
-            <div className="flex items-center gap-2 mb-2">
-              <ImageIcon className="w-4 h-4 text-gray-500" />
-              <span className="text-xs text-gray-600">
-                {category.images.length} {category.images.length === 1 ? 'imagen' : 'imágenes'}
-              </span>
+            {/* Visor de imagen actual */}
+            <div className="relative h-32 bg-gray-100 rounded-lg overflow-hidden mb-2 group">
+              <Image
+                src={images[currentImageIndex]}
+                alt={`${category.name} - imagen ${currentImageIndex + 1}`}
+                fill
+                className="object-cover"
+                sizes="(max-width: 768px) 100vw, 200px"
+              />
+              
+              {/* Indicador de navegación */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentImageIndex(prev => (prev - 1 + images.length) % images.length);
+                    }}
+                    className="absolute left-1 top-1/2 transform -translate-y-1/2 bg-black/30 text-white p-1 rounded-full hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentImageIndex(prev => (prev + 1) % images.length);
+                    }}
+                    className="absolute right-1 top-1/2 transform -translate-y-1/2 bg-black/30 text-white p-1 rounded-full hover:bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                  
+                  {/* Contador */}
+                  <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
+                    {currentImageIndex + 1}/{images.length}
+                  </div>
+                </>
+              )}
             </div>
+
+            {/* Miniaturas */}
             <div className="grid grid-cols-4 gap-1">
-              {category.images.slice(0, 4).map((img, idx) => (
+              {images.slice(0, 4).map((img, idx) => (
                 <div
                   key={idx}
-                  className="relative h-12 bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:opacity-75 transition-opacity"
-                  onClick={onViewImages}
+                  className={`relative h-12 bg-gray-100 rounded-lg overflow-hidden cursor-pointer transition-all ${
+                    idx === currentImageIndex ? 'ring-2 ring-[#EC1F25]' : 'hover:opacity-75'
+                  }`}
+                  onClick={() => setCurrentImageIndex(idx)}
                 >
-                  <Image src={img} alt={`${category.name} ${idx + 1}`} fill className="object-cover" />
+                  <Image 
+                    src={img} 
+                    alt={`${category.name} miniatura ${idx + 1}`} 
+                    fill 
+                    className="object-cover" 
+                  />
                 </div>
               ))}
-              {category.images.length > 4 && (
+              {images.length > 4 && (
                 <div
                   className="relative h-12 bg-gray-200 rounded-lg flex items-center justify-center text-xs font-medium text-gray-600 cursor-pointer hover:bg-gray-300"
                   onClick={onViewImages}
                 >
-                  +{category.images.length - 4}
+                  +{images.length - 4}
                 </div>
               )}
             </div>
+            
+            {/* Indicador de cantidad */}
+            <div className="flex items-center justify-between mt-2">
+              <div className="flex items-center gap-1 text-xs text-gray-500">
+                <ImageIcon className="w-3 h-3" />
+                <span>{images.length} {images.length === 1 ? 'imagen' : 'imágenes'}</span>
+              </div>
+              <button
+                onClick={onViewImages}
+                className="text-xs text-[#EC1F25] hover:underline"
+              >
+                Ver todas
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Mensaje si no tiene imágenes */
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200 text-center">
+            <ImageIcon className="w-6 h-6 text-gray-400 mx-auto mb-1" />
+            <p className="text-xs text-gray-500">Sin imágenes</p>
+            <button
+              onClick={onViewImages}
+              className="text-xs text-[#EC1F25] hover:underline mt-1"
+            >
+              Agregar imágenes
+            </button>
           </div>
         )}
 
