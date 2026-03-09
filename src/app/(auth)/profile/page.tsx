@@ -40,11 +40,7 @@ export default function ProfilePage() {
     );
   }
 
-  const stats = [
-    { icon: ShoppingBag, label: 'Pedidos', value: '12', color: 'blue' },
-    { icon: Star, label: 'Puntos', value: '850', color: 'yellow' },
-    { icon: CreditCard, label: 'Gastado', value: 'S/ 480', color: 'green' }
-  ];
+ 
 
   return (
     <ProtectedRoute>
@@ -94,19 +90,7 @@ export default function ProfilePage() {
                         Editar
                       </Button>
                     </div>
-
-                    {/* Stats */}
-                    <div className="grid grid-cols-3 gap-4 mb-8">
-                      {stats.map((stat, index) => (
-                        <div key={index} className="bg-gray-50 rounded-xl p-4 text-center">
-                          <div className={`w-12 h-12 rounded-full ${stat.color === 'blue' ? 'bg-blue-100' : stat.color === 'yellow' ? 'bg-yellow-100' : 'bg-green-100'} flex items-center justify-center mx-auto mb-2`}>
-                            <stat.icon className={`w-6 h-6 ${stat.color === 'blue' ? 'text-blue-600' : stat.color === 'yellow' ? 'text-yellow-600' : 'text-green-600'}`} />
-                          </div>
-                          <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
-                          <div className="text-sm text-gray-600">{stat.label}</div>
-                        </div>
-                      ))}
-                    </div>
+                    
 
                     {/* Contact Info */}
                     <div className="space-y-4">
@@ -158,35 +142,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Recent Orders */}
-              <div className="bg-white rounded-2xl shadow-lg p-6">
-                <h3 className="text-xl font-bold mb-6 flex items-center">
-                  <ShoppingBag className="w-5 h-5 mr-2" />
-                  Pedidos Recientes
-                </h3>
-                <div className="space-y-4">
-                  {[1, 2, 3].map((order) => (
-                    <div key={order} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
-                      <div>
-                        <p className="font-medium">Orden #100{order}</p>
-                        <p className="text-sm text-gray-600">Chaufa Especial, Wantán Frito</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold text-red-600">S/ {25 + order * 5}.00</p>
-                        <p className="text-sm text-gray-600">Hace {order} día{order > 1 ? 's' : ''}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <Button 
-                  variant="outline" 
-                  fullWidth 
-                  className="mt-6"
-                  onClick={() => router.push('/orders')}
-                >
-                  Ver Todos los Pedidos
-                </Button>
-              </div>
+              
             </div>
 
             {/* Right Column - Actions */}
@@ -195,20 +151,7 @@ export default function ProfilePage() {
               <div className="bg-white rounded-2xl shadow-lg p-6">
                 <h3 className="text-xl font-bold mb-6">Acciones Rápidas</h3>
                 <div className="space-y-4">
-                  <Button 
-                    variant="primary" 
-                    fullWidth
-                    onClick={() => router.push('/menu')}
-                  >
-                    Hacer Pedido
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    fullWidth
-                    onClick={() => router.push('/orders')}
-                  >
-                    Mis Pedidos
-                  </Button>
+                  
                   <Button 
                     variant="outline" 
                     fullWidth

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import AuthForm from '@/components/auth/AuthForm';
 import Link from 'next/link';
 import { ChefHat } from 'lucide-react';
@@ -23,7 +24,13 @@ export default function RegisterPage() {
             </p>
           </div>
 
-          <AuthForm mode="register" />
+          <Suspense fallback={
+            <div className="flex justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+            </div>
+          }>
+            <AuthForm mode="register" />
+          </Suspense>
 
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">

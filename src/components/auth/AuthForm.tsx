@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation'; // Añadir useSearchParams
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/buttons';
@@ -11,13 +11,14 @@ interface AuthFormProps {
   mode: 'login' | 'register';
 }
 
-export default function AuthForm({ mode }: AuthFormProps) {
+// Componente interno que usa useSearchParams
+function AuthFormContent({ mode }: AuthFormProps) {
   const router = useRouter();
-  const searchParams = useSearchParams(); // Obtener parámetros de la URL
+  const searchParams = useSearchParams();
   const { login, register, googleLogin, error: authError } = useAuth();
   
   // Obtener la URL de redirección de los query params
-  const redirectUrl = searchParams.get('redirect') || '/';
+  const redirectUrl = searchParams?.get('redirect') || '/';
   
   const [formData, setFormData] = useState({
     email: '',
@@ -68,7 +69,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
       if (mode === 'login') {
         const result = await login(formData.email, formData.password);
         if (result.success) {
-          // Redirigir a la URL guardada o al home
           console.log('🔀 Redirigiendo a:', redirectUrl);
           router.push(redirectUrl);
           router.refresh();
@@ -77,8 +77,6 @@ export default function AuthForm({ mode }: AuthFormProps) {
         const result = await register(formData.email, formData.password, formData.displayName);
         if (result.success) {
           alert('¡Registro exitoso! Por favor verifica tu email antes de iniciar sesión.');
-          // IMPORTANTE: Después del registro, redirigir al login pero guardando 
-          // la URL original para redirigir después del login
           router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
         }
       }
@@ -213,5 +211,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
         </Button>
       </div>
     </div>
+  );
+}
+
+// Componente principal que se exporta
+export default function AuthForm(props: AuthFormProps) {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+      </div>
+    }>
+      <AuthFormContent {...props} />
+    </Suspense>
   );
 }
