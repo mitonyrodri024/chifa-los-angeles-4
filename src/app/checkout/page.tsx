@@ -459,15 +459,7 @@ export default function CheckoutPage() {
                   return (
                     <div key={item.dishId} className="p-6">
                       <div className="flex items-start gap-4">
-                        <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
-                          {item.image ? (
-                            <img src={item.image} alt={item.dishName} className="w-full h-full object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <span className="text-2xl">{getDishTypeIcon(item.dishType)}</span>
-                            </div>
-                          )}
-                        </div>
+                        
                         <div className="flex-1">
                           <div className="flex justify-between">
                             <div>
@@ -591,7 +583,7 @@ export default function CheckoutPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Notas Adicionales (opcional)
+                  Adicionales (opcional)
                 </label>
                 <textarea
                   value={notes}

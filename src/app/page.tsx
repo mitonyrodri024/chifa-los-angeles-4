@@ -123,7 +123,7 @@ export default function HomePage() {
                     <Phone className="w-8 h-8 text-yellow-400" />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-2xl font-bold text-yellow-400">976 393 071</p>
+                    <p className="text-2xl font-bold text-yellow-400">963 753 366</p>
                     <p className="text-sm text-white/70">Pedidos y delivery</p>
                   </div>
                 </div>
@@ -134,7 +134,7 @@ export default function HomePage() {
                     <Phone className="w-8 h-8 text-yellow-400" />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-2xl font-bold text-yellow-400">976 393 072</p>
+                    <p className="text-2xl font-bold text-yellow-400">976 039 735 </p>
                     <p className="text-sm text-white/70">Reservas y eventos</p>
                   </div>
                 </div>
@@ -145,7 +145,7 @@ export default function HomePage() {
                     <MapPin className="w-8 h-8 text-yellow-400" />
                   </div>
                   <div className="space-y-2">
-                    <p className="text-xl font-bold text-white">Jr. Independencia 456</p>
+                    <p className="text-xl font-bold text-white">Jr. Ayacucho 1478</p>
                     <p className="text-sm text-white/70">Cajamarca - Perú</p>
                     
                   </div>
@@ -159,16 +159,6 @@ export default function HomePage() {
                   Lunes a Domingo 11:00 am - 11:00 pm
                 </p>
               </div>
-            </div>
-
-            {/* Botón flotante inferior (visible en móvil) */}
-            <div className="md:hidden fixed bottom-6 right-6 z-50">
-              <button
-                onClick={() => router.push('/menu')}
-                className="w-16 h-16 bg-yellow-400 hover:bg-yellow-500 text-red-700 rounded-full shadow-2xl flex items-center justify-center transition-all hover:scale-110 group"
-              >
-                <Utensils className="w-8 h-8" />
-              </button>
             </div>
 
           </div>

@@ -110,8 +110,8 @@ export default function RootLayout({
             target="_blank"
             rel="noopener noreferrer"
           >
-            <div className="w-14 h-14 bg-red-500 rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-all">
-              <Image src="/whatsapp.png" alt="WhatsApp Ventas" width={28} height={28} />
+            <div className="">
+              <Image src="/whatsapp.png" alt="WhatsApp Ventas" width={48} height={48} />
             </div>
           </a>         
 

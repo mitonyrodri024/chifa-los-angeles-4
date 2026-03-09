@@ -228,7 +228,7 @@ export default function Navbar() {
               <div className="text-white">
                 <h1 className="text-xl md:text-2xl font-extrabold leading-tight tracking-tight">
                   <span className="text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]">CHIFA</span>{' '}
-                  <span className="text-yellow-300 font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">LOS ANGELES</span>
+                  <span className="text-yellow-300 font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">LOS ANGELES 4</span>
                 </h1>
                 <p className="text-xs md:text-sm text-white/90 font-medium hidden sm:block">
                   🥢 Auténtica cocina china · ¡La sazón que pruebes! 🥢
@@ -366,13 +366,7 @@ export default function Navbar() {
                         </svg>
                         Editar Perfil
                       </Link>
-                      <Link href="/orders" onClick={() => setIsUserMenuOpen(false)}
-                        className="flex items-center gap-3 px-3 py-2 rounded hover:bg-gray-100 text-gray-700 transition-colors">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        Mis Pedidos
-                      </Link>
+                     
 
                       {/* Panel admin - MEJORADO CON MÁS OPCIONES */}
                       {(user as any)?.role === 'admin' && (
@@ -383,14 +377,11 @@ export default function Navbar() {
                             </span>
                           </div>
                           
-                          {/* Dashboard */}
-                          <Link href="/admin/dashboard" onClick={() => setIsUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-purple-50 text-purple-700 transition-colors mb-1">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-                            </svg>
-                            Dashboard
-                          </Link>
+                           {/* Categorías */}
+                          <Link href="/admin/categories" onClick={() => setIsUserMenuOpen(false)}
+                            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-red-50 text-red-700 transition-colors mb-1 mt-2">
+                            <Tag className="w-4 h-4" /> Gestionar Categorías
+                          </Link>                          
 
                           {/* GESTIÓN DE PLATOS - SECCIÓN PRINCIPAL */}
                           <Link href="/admin/dishes" onClick={() => setIsUserMenuOpen(false)}
@@ -405,20 +396,9 @@ export default function Navbar() {
                             <Plus className="w-3.5 h-3.5" /> Agregar Nuevo Plato
                           </Link>
                           
-                          {/* Categorías */}
-                          <Link href="/admin/categories" onClick={() => setIsUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-red-50 text-red-700 transition-colors mb-1 mt-2">
-                            <Tag className="w-4 h-4" /> Gestionar Categorías
-                          </Link>
+                         
                           
-                          {/* Pedidos (opcional) */}
-                          <Link href="/admin/orders" onClick={() => setIsUserMenuOpen(false)}
-                            className="flex items-center gap-3 px-3 py-2 rounded hover:bg-green-50 text-green-700 transition-colors">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                            </svg>
-                            Pedidos
-                          </Link>
+                          
                         </div>
                       )}
                     </div>
