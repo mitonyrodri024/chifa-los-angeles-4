@@ -164,7 +164,7 @@ export default function Navbar() {
                 <div className="text-white">
                   <h1 className="text-xl md:text-2xl font-extrabold leading-tight tracking-tight">
                     <span className="text-white drop-shadow-[0_2px_2px_rgba(0,0,0,0.3)]">CHIFA</span>{' '}
-                    <span className="text-yellow-300 font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">LOS ANGELES</span>
+                    <span className="text-yellow-300 font-black drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]">LOS ANGELES 4</span>
                   </h1>
                   <p className="text-xs md:text-sm text-white/90 font-medium hidden sm:block animate-pulse">
                     🥢 Auténtica cocina china · ¡La sazón que pruebes! 🥢

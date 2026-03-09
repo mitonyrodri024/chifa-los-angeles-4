@@ -39,11 +39,11 @@ export const metadata: Metadata = {
   creator: "CHIFA LOS ANGELES",
 
   openGraph: {
-    title: "CHIFA LOS ANGELES | Auténtica Cocina China",
+    title: "CHIFA LOS ANGELES 4 | Auténtica Cocina China",
     description:
       "La sazón que pruebes. Restaurante de comida china con atención presencial y pedidos por WhatsApp.",
     url: "https://chifa-los-angeles-4.com",
-    siteName: "CHIFA LOS ANGELES",
+    siteName: "CHIFA LOS ANGELES 4",
     locale: "es_PE",
     type: "website",
     images: [
