@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/contexts/AuthContext";
 
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
+import FloatingWhatsApp from "@/components/ui/FloatingWhatsApp"; // Importar el componente
 
 // Fuente Inter
 const inter = Inter({
@@ -103,19 +104,8 @@ export default function RootLayout({
 
         </AuthProvider>
 
-        <div className="fixed bottom-6 right-6 z-40 flex flex-col gap-3 md:hidden">
+        <FloatingWhatsApp />
 
-          <a
-            href="https://wa.me/51963753366"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <div className="">
-              <Image src="/whatsapp.png" alt="WhatsApp Ventas" width={48} height={48} />
-            </div>
-          </a>         
-
-        </div>
       </body>
     </html>
   );

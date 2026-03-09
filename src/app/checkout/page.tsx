@@ -633,13 +633,13 @@ export default function CheckoutPage() {
                       <>
                         {totals.sopaSurcharge > 0 && (
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">🍲 Sobrecargo sopas</span>
+                            <span className="text-gray-600">🍲 Sobrecargo plato </span>
                             <span className="font-medium">S/ {totals.sopaSurcharge.toFixed(2)}</span>
                           </div>
                         )}
                         {totals.menuSurcharge > 0 && (
                           <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">🍱 Sobrecargo menús</span>
+                            <span className="text-gray-600">🍱 Sobrecargo plato</span>
                             <span className="font-medium">S/ {totals.menuSurcharge.toFixed(2)}</span>
                           </div>
                         )}

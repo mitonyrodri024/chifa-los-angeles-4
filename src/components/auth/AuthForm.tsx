@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation'; // Añadir useSearchParams
 import { useAuth } from '@/lib/hooks/useAuth';
 import Input from '@/components/ui/Input';
 import Button from '@/components/ui/buttons';
@@ -13,7 +13,11 @@ interface AuthFormProps {
 
 export default function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams(); // Obtener parámetros de la URL
   const { login, register, googleLogin, error: authError } = useAuth();
+  
+  // Obtener la URL de redirección de los query params
+  const redirectUrl = searchParams.get('redirect') || '/';
   
   const [formData, setFormData] = useState({
     email: '',
@@ -23,6 +27,11 @@ export default function AuthForm({ mode }: AuthFormProps) {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Log para debugging
+  useEffect(() => {
+    console.log('🔀 URL de redirección:', redirectUrl);
+  }, [redirectUrl]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -59,14 +68,18 @@ export default function AuthForm({ mode }: AuthFormProps) {
       if (mode === 'login') {
         const result = await login(formData.email, formData.password);
         if (result.success) {
-          router.push('/');
+          // Redirigir a la URL guardada o al home
+          console.log('🔀 Redirigiendo a:', redirectUrl);
+          router.push(redirectUrl);
           router.refresh();
         }
       } else {
         const result = await register(formData.email, formData.password, formData.displayName);
         if (result.success) {
           alert('¡Registro exitoso! Por favor verifica tu email antes de iniciar sesión.');
-          router.push('/login');
+          // IMPORTANTE: Después del registro, redirigir al login pero guardando 
+          // la URL original para redirigir después del login
+          router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
         }
       }
     } catch (error) {
@@ -81,7 +94,8 @@ export default function AuthForm({ mode }: AuthFormProps) {
     try {
       const result = await googleLogin();
       if (result.success) {
-        router.push('/');
+        console.log('🔀 Redirigiendo a:', redirectUrl);
+        router.push(redirectUrl);
         router.refresh();
       }
     } catch (error) {
