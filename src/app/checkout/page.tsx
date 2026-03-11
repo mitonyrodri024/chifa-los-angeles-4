@@ -272,7 +272,7 @@ export default function CheckoutPage() {
           `🆔 *ID Pedido:* ${newOrder.id}`,
         ].filter(Boolean).join('\n');
 
-        const whatsappUrl = `https://wa.me/51930889106?text=${encodeURIComponent(mensaje)}`;
+        const whatsappUrl = `https://wa.me/51976036735?text=${encodeURIComponent(mensaje)}`;
         window.open(whatsappUrl, '_blank');
 
         setTimeout(() => {

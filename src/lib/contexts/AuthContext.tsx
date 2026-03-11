@@ -10,7 +10,7 @@ import { User } from '@/types/user.types';
 const ADMIN_EMAILS = [
   'arodriguezb20_2@unc.edu.pe',
   // Puedes agregar más correos aquí
-  'admin@chifa.com'
+  'jhonatanalayachavez3@gmail.com'
 ];
 
 interface AuthContextType {
