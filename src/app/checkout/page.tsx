@@ -69,7 +69,6 @@ export default function CheckoutPage() {
         setIsLoadingCategories(true);
         const categoriesData = await categoryService.getAllCategories();
         setCategories(categoriesData);
-        console.log('📦 Categorías cargadas en checkout:', categoriesData.length);
       } catch (error) {
         console.error('Error al cargar categorías:', error);
       } finally {
@@ -89,7 +88,6 @@ export default function CheckoutPage() {
           ...item,
           uniqueId: item.uniqueId || `${item.dishId}_${Date.now()}_${Math.random()}`
         }));
-        console.log('🛒 Carrito cargado:', parsed);
         setCartItems(parsed);
       } catch (error) {
         console.error('Error al cargar carrito:', error);
@@ -107,24 +105,20 @@ export default function CheckoutPage() {
     }
   }, [cartItems, isLoadingCart, isLoadingCategories]);
 
-  // Obtener la categoría de un item
   const getItemCategory = (item: CartItem): Category | undefined => {
     return categories.find(c => c.id === item.categoryId);
   };
 
-  // Verificar si un item pertenece a una categoría con opciones especiales
   const hasSpecialOptions = (item: CartItem): boolean => {
     const category = getItemCategory(item);
     return !!(category?.specialOptions && category.specialOptions.length > 0);
   };
 
-  // Obtener las opciones especiales de la categoría
   const getSpecialOptions = (item: CartItem) => {
     const category = getItemCategory(item);
     return category?.specialOptions || [];
   };
 
-  // Manejar selección de opción especial
   const handleSpecialOptionChange = (uniqueId: string, option: any) => {
     const updatedCart = cartItems.map(item => {
       if ((item.uniqueId || item.dishId) === uniqueId) {
@@ -143,15 +137,12 @@ export default function CheckoutPage() {
     });
     setCartItems(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
-    // No cerramos el expandible para que pueda cambiar después
   };
 
-  // Toggle expandible de opciones
   const toggleOptions = (uniqueId: string) => {
     setExpandedOptions(prev => ({ ...prev, [uniqueId]: !prev[uniqueId] }));
   };
 
-  // Actualizar cantidad
   const updateQuantity = (uniqueId: string, newQuantity: number) => {
     if (newQuantity < 1) {
       removeItem(uniqueId);
@@ -165,7 +156,6 @@ export default function CheckoutPage() {
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  // Eliminar item
   const removeItem = (uniqueId: string) => {
     const updatedCart = cartItems.filter(item => (item.uniqueId || item.dishId) !== uniqueId);
     setCartItems(updatedCart);
@@ -173,7 +163,6 @@ export default function CheckoutPage() {
     window.dispatchEvent(new Event('cartUpdated'));
   };
 
-  // Vaciar carrito
   const clearCart = () => {
     if (confirm('¿Estás seguro de vaciar el carrito?')) {
       setCartItems([]);
@@ -182,7 +171,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Calcular total
   const calculateTotal = () => {
     let subtotal = 0;
     let sopaSurcharge = 0;
@@ -192,7 +180,6 @@ export default function CheckoutPage() {
     cartItems.forEach(item => {
       subtotal += item.price * item.quantity;
 
-      // Solo aplicar recargos por dishType si NO tiene opciones especiales
       if (orderType === 'delivery' && !hasSpecialOptions(item)) {
         if (item.dishType === 'sopa') {
           sopaSurcharge += 0.5 * item.quantity;
@@ -220,7 +207,6 @@ export default function CheckoutPage() {
 
   const totals = calculateTotal();
 
-  // Sobrecargo individual
   const getItemSurcharge = (item: CartItem) => {
     if (orderType !== 'delivery' || hasSpecialOptions(item)) return 0;
     if (item.dishType === 'sopa') return 0.5 * item.quantity;
@@ -228,12 +214,10 @@ export default function CheckoutPage() {
     return 0;
   };
 
-  // Precio total del item
   const getItemTotalPrice = (item: CartItem) => {
     return item.price * item.quantity + getItemSurcharge(item);
   };
 
-  // Procesar pedido
   const handleSubmitOrder = async () => {
     if (!user) {
       setError('Por favor, inicia sesión para continuar');
@@ -298,59 +282,7 @@ export default function CheckoutPage() {
         localStorage.removeItem('cart');
         window.dispatchEvent(new Event('cartUpdated'));
 
-        const itemsText = orderItems
-          .map(item => {
-            let itemLine = `  • ${item.dishName} x${item.quantity} = S/ ${(item.price * item.quantity).toFixed(2)}`;
-            if (item.surcharge > 0) {
-              itemLine += ` (+S/ ${item.surcharge.toFixed(2)} por ${item.dishType})`;
-            }
-            if (item.selectedSpecialOption) {
-              itemLine += `\n    └─ ✨ ${item.selectedSpecialOption.label}: +S/ ${(item.selectedSpecialOption.price * item.quantity).toFixed(2)}`;
-            }
-            return itemLine;
-          })
-          .join('\n');
-
-        const deliveryText = orderType === 'delivery'
-          ? `🚚 *Delivery a:* ${deliveryAddress.trim()}\n   (El costo de envío se paga al llegar)`
-          : `🏪 *Recojo en tienda*`;
-
-        const surchargeText = totals.totalSurcharge > 0
-          ? `💰 *Cargos adicionales:* S/ ${totals.totalSurcharge.toFixed(2)}\n   (Sopas: S/ ${totals.sopaSurcharge.toFixed(2)} | Menús: S/ ${totals.menuSurcharge.toFixed(2)})`
-          : '';
-
-        const specialText = totals.specialOptionsTotal > 0
-          ? `✨ *Opciones especiales:* S/ ${totals.specialOptionsTotal.toFixed(2)}`
-          : '';
-
-        const notesText = notes.trim() ? `\n📝 *Notas:* ${notes.trim()}` : '';
-
-        const mensaje = [
-          `🍜 *NUEVO PEDIDO - Chifa Los Angeles*`,
-          `─────────────────────`,
-          `👤 *Cliente:* ${user.displayName || 'Cliente'}`,
-          `📧 *Email:* ${user.email}`,
-          `─────────────────────`,
-          `🛒 *Pedido:*`,
-          itemsText,
-          `─────────────────────`,
-          deliveryText,
-          specialText ? `─────────────────────\n${specialText}` : '',
-          surchargeText ? `─────────────────────\n${surchargeText}` : '',
-          `─────────────────────`,
-          `💰 *Subtotal:* S/ ${totals.subtotal.toFixed(2)}`,
-          `✅ *TOTAL: S/ ${totals.total.toFixed(2)}*`,
-          notesText,
-          `─────────────────────`,
-          `🆔 *ID Pedido:* ${newOrder.id}`,
-        ].filter(Boolean).join('\n');
-
-        const whatsappUrl = `https://wa.me/51976036735?text=${encodeURIComponent(mensaje)}`;
-        window.open(whatsappUrl, '_blank');
-
-        setTimeout(() => {
-          router.push(`/orders/${newOrder.id}`);
-        }, 5000);
+        // 🔥 Ya no redirige automáticamente
       } else {
         setError('Error al crear el pedido. Intenta nuevamente.');
       }
@@ -384,7 +316,6 @@ export default function CheckoutPage() {
             <h1 className="text-3xl font-bold text-gray-900 mb-4">Tu carrito está vacío</h1>
             <p className="text-gray-600 mb-8">
               Parece que aún no has agregado ningún plato a tu carrito.
-              ¡Explora nuestro menú y descubre los mejores platos de Chifa!
             </p>
             <Link
               href="/menu"
@@ -437,13 +368,20 @@ export default function CheckoutPage() {
                 </div>
               </div>
             </div>
-            <p className="text-gray-500 mb-6">Redirigiendo a los detalles del pedido...</p>
+            
+            {/* 🔥 BOTONES PARA IR AL MENÚ */}
             <div className="flex justify-center gap-4">
-              <Link href="/" className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
-                Volver al Menú
+              <Link
+                href="/menu"
+                className="px-6 py-3 bg-chifa-red text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Seguir Comprando
               </Link>
-              <Link href={`/orders/${orderId}`} className="px-6 py-3 bg-chifa-red text-white font-semibold rounded-lg hover:bg-red-700 transition-colors">
-                Ver Detalles
+              <Link
+                href="/"
+                className="px-6 py-3 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Ir al Inicio
               </Link>
             </div>
           </div>
@@ -485,7 +423,9 @@ export default function CheckoutPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Resto del código del carrito igual */}
           <div className="lg:col-span-2">
+            {/* ... contenido del carrito ... */}
             <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -551,7 +491,6 @@ export default function CheckoutPage() {
                             </div>
                           </div>
 
-                          {/* 🔥 SELECTOR DE OPCIONES ESPECIALES MEJORADO */}
                           {hasOptions && (
                             <div className="mt-4 border-t pt-4">
                               <div className="flex items-center justify-between mb-2">
@@ -565,7 +504,6 @@ export default function CheckoutPage() {
                                 </button>
                               </div>
 
-                              {/* Opción seleccionada actualmente */}
                               {item.selectedSpecialOption && (
                                 <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
                                   <div className="flex justify-between items-center">
@@ -578,11 +516,9 @@ export default function CheckoutPage() {
                                 </div>
                               )}
 
-                              {/* Lista de opciones (solo cuando está expandido) */}
                               {isExpanded && (
                                 <div className="space-y-2">
                                   {specialOptions.map((option, idx) => {
-                                    // No mostrar la opción ya seleccionada
                                     if (item.selectedSpecialOption?.type === option.type) return null;
                                     
                                     const totalPrice = (item.basePrice || item.price) + option.price;

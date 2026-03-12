@@ -8,7 +8,7 @@ import SpecialOptionModal from './SpecialOptionModal';
 
 interface DishCardProps {
   dish: Dish;
-  category?: Category; // ← NUEVO: Recibir la categoría completa
+  category?: Category;
   onOrder?: () => void;
   onDelivery?: () => void;
   showAdminActions?: boolean;
@@ -52,14 +52,11 @@ export default function DishCard({
     });
 
     try {
-      // Obtener carrito actual
       const savedCart = localStorage.getItem('cart');
       let cart = savedCart ? JSON.parse(savedCart) : [];
 
-      // Crear identificador único incluyendo la opción especial
       const itemId = `${dish.id}_${selectedOption.type}`;
 
-      // Verificar si ya existe este plato con la misma opción
       const existingItemIndex = cart.findIndex((item: any) =>
         item.dishId === dish.id &&
         item.selectedSpecialOption?.type === selectedOption.type
@@ -73,12 +70,11 @@ export default function DishCard({
         price: finalPrice,
         quantity: 1,
         image: dish.image || '/placeholder.jpg',
-        categoryId: dish.categoryId,          // ✅ AGREGADO
+        categoryId: dish.categoryId,
         categoryName: dish.categoryName,
         description: dish.description,
         preparationTime: dish.preparationTime,
         dishType: dish.dishType || 'normal',
-        // Guardar la opción especial seleccionada
         selectedSpecialOption: {
           type: selectedOption.type,
           label: selectedOption.label,
@@ -88,24 +84,17 @@ export default function DishCard({
       };
 
       if (existingItemIndex !== -1) {
-        // Si existe, incrementar cantidad
         cart[existingItemIndex].quantity += 1;
       } else {
-        // Si no existe, agregar nuevo item
         cart.push(cartItem);
       }
 
-      // Guardar en localStorage
       localStorage.setItem('cart', JSON.stringify(cart));
-
-      // Disparar evento para actualizar el navbar
       window.dispatchEvent(new Event('cartUpdated'));
 
-      // Mostrar mensaje de confirmación
       setShowAddedMessage(true);
       setTimeout(() => setShowAddedMessage(false), 2000);
 
-      // Cerrar modal
       setShowSpecialModal(false);
       setPendingAction(null);
 
@@ -115,14 +104,13 @@ export default function DishCard({
     }
   };
 
-  // 🔥 FUNCIÓN CORREGIDA - AGREGAR categoryId
   const addToCartNormal = () => {
     if (!dish.isAvailable) return;
 
     console.log('🍽️ AGREGANDO PLATO:', {
       dishId: dish.id,
       dishName: dish.name,
-      categoryId: dish.categoryId,        // 👈 VERIFICAR ESTO
+      categoryId: dish.categoryId,
       categoryName: dish.categoryName
     });
 
@@ -138,7 +126,7 @@ export default function DishCard({
         price: dish.price,
         quantity: 1,
         image: dish.image || '/placeholder.jpg',
-        categoryId: dish.categoryId,       // 👈 ESTO DEBE ESTAR
+        categoryId: dish.categoryId,
         categoryName: dish.categoryName,
         description: dish.description,
         preparationTime: dish.preparationTime,
@@ -173,7 +161,6 @@ export default function DishCard({
       return;
     }
 
-    // Si tiene opciones especiales, mostrar modal
     if (hasSpecialOptions) {
       setPendingAction('order');
       setShowSpecialModal(true);
@@ -190,7 +177,6 @@ export default function DishCard({
       return;
     }
 
-    // Si tiene opciones especiales, mostrar modal
     if (hasSpecialOptions) {
       setPendingAction('delivery');
       setShowSpecialModal(true);
@@ -199,7 +185,6 @@ export default function DishCard({
     }
   };
 
-  // Función para obtener el icono según el tipo de plato
   const getDishTypeIcon = () => {
     if (dish.dishType === 'sopa') return '🍲';
     if (dish.dishType === 'menu') return '🍱';
@@ -209,22 +194,18 @@ export default function DishCard({
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-200 flex flex-col h-full relative">
 
-      {/* Mensaje de confirmación temporal */}
       {showAddedMessage && (
         <div className="absolute top-2 right-2 z-10 bg-green-500 text-white px-3 py-1 rounded-full text-sm font-semibold animate-bounce">
           ✅ Agregado
         </div>
       )}
 
-      {/* Información del plato */}
       <div className="p-4 flex-grow">
-        {/* Categoría */}
         <div className="mb-2 flex items-center justify-between">
           <span className="inline-block px-2 py-1 text-xs font-semibold rounded-full bg-yellow-400 text-gray-900">
             {dish.categoryName}
           </span>
 
-          {/* Mostrar tipo en línea si no hay imagen */}
           {hideImage && dish.dishType && dish.dishType !== 'normal' && (
             <span className={`text-xs px-2 py-1 rounded-full font-semibold ${dish.dishType === 'sopa'
               ? 'bg-blue-100 text-blue-800'
@@ -234,7 +215,6 @@ export default function DishCard({
             </span>
           )}
 
-          {/* NUEVO: Badge si tiene opciones especiales */}
           {hasSpecialOptions && (
             <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-semibold">
               ✨ Elegir opción
@@ -242,17 +222,15 @@ export default function DishCard({
           )}
         </div>
 
-        {/* Nombre */}
-        <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-1">
+        {/* 🔥 NOMBRE CORREGIDO - SIN line-clamp */}
+        <h3 className="text-lg font-bold text-gray-900 mb-2 break-words">
           {dish.name}
         </h3>
 
-        {/* Descripción */}
         <p className="text-gray-600 text-sm mb-4 line-clamp-2">
           {dish.description}
         </p>
 
-        {/* Información adicional */}
         <div className="flex items-center gap-3 text-sm text-gray-500 mb-4">
           {dish.preparationTime && (
             <div className="flex items-center gap-1">
@@ -261,7 +239,6 @@ export default function DishCard({
             </div>
           )}
 
-          {/* Ingredientes si existen */}
           {dish.ingredients && dish.ingredients.length > 0 && (
             <div className="flex items-center gap-1 text-xs bg-gray-100 px-2 py-1 rounded-full">
               <span>🥘 {dish.ingredients.slice(0, 2).join(', ')}</span>
@@ -270,21 +247,18 @@ export default function DishCard({
           )}
         </div>
 
-        {/* Precio y tipo */}
         <div className="flex items-center justify-between mb-4">
           <span className="text-2xl font-bold text-[#EC1F25]">
             S/ {dish.price.toFixed(2)}
           </span>
 
           <div className="flex items-center gap-2">
-            {/* Mostrar información de sobrecargo si aplica */}
             {dish.dishType && dish.dishType !== 'normal' && (
               <span className="text-xs text-gray-500">
                 {dish.dishType === 'sopa' ? '+S/0.50' : '+S/1.00'} en delivery
               </span>
             )}
 
-            {/* Popularidad (opcional) */}
             {dish.orderCount && dish.orderCount > 0 && (
               <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded-full">
                 🔥 {dish.orderCount} pedidos
@@ -293,7 +267,6 @@ export default function DishCard({
           </div>
         </div>
 
-        {/* NUEVO: Vista previa de opciones especiales */}
         {hasSpecialOptions && category?.specialOptions && (
           <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
             <p className="text-xs font-medium text-gray-700 mb-1">Opciones disponibles:</p>
@@ -309,10 +282,8 @@ export default function DishCard({
         )}
       </div>
 
-      {/* Botones de acción */}
       <div className="p-4 pt-0 border-t border-gray-100">
         {showAdminActions ? (
-          /* Botones para administrador */
           <div className="flex gap-2">
             <button
               onClick={onEdit}
@@ -334,7 +305,6 @@ export default function DishCard({
             </button>
           </div>
         ) : (
-          /* Botones para cliente */
           <div className="flex gap-2">
             <button
               onClick={handleOrderClick}
@@ -363,7 +333,6 @@ export default function DishCard({
         )}
       </div>
 
-      {/* Modal de opciones especiales */}
       {hasSpecialOptions && category?.specialOptions && (
         <SpecialOptionModal
           isOpen={showSpecialModal}
