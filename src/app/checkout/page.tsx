@@ -505,9 +505,7 @@ export default function CheckoutPage() {
                                 <span className="text-sm font-medium text-gray-700">
                                   ¿Con qué deseas tu pedido?
                                 </span>
-                                <span className="text-xs px-2 py-0.5 bg-red-100 text-red-800 rounded-full font-semibold">
-                                  Obligatorio
-                                </span>
+                                
                               </div>
 
                               <div className="space-y-3">
