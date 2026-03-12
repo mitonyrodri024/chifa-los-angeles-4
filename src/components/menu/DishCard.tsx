@@ -1,12 +1,14 @@
 // src/components/menu/DishCard.tsx
 'use client';
 
-import { Dish } from '@/types/menu.types';
+import { Dish, Category } from '@/types/menu.types';
 import { Utensils, Truck, Clock } from 'lucide-react';
 import { useState } from 'react';
+import SpecialOptionModal from './SpecialOptionModal';
 
 interface DishCardProps {
   dish: Dish;
+  category?: Category; // ← NUEVO: Recibir la categoría completa
   onOrder?: () => void;
   onDelivery?: () => void;
   showAdminActions?: boolean;
@@ -17,6 +19,7 @@ interface DishCardProps {
 
 export default function DishCard({
   dish,
+  category,
   onOrder,
   onDelivery,
   showAdminActions = false,
@@ -26,15 +29,26 @@ export default function DishCard({
 }: DishCardProps) {
   const [imageError, setImageError] = useState(false);
   const [showAddedMessage, setShowAddedMessage] = useState(false);
+  const [showSpecialModal, setShowSpecialModal] = useState(false);
+  const [pendingAction, setPendingAction] = useState<'order' | 'delivery' | null>(null);
 
-  // Función para agregar al carrito
-  const addToCart = () => {
+  // Verificar si la categoría tiene opciones especiales
+  const hasSpecialOptions = category?.hasSpecialOptions &&
+    category.specialOptions &&
+    category.specialOptions.length > 0;
+
+  // Función para agregar al carrito con opción especial
+  const addToCartWithSpecialOption = (selectedOption: any) => {
     if (!dish.isAvailable) return;
 
-    console.log('🍽️ Agregando al carrito:', {
+    const finalPrice = dish.price + selectedOption.price;
+
+    console.log('🍽️ Agregando al carrito con opción especial:', {
       name: dish.name,
-      dishType: dish.dishType,
-      dishTypeFromDB: dish.dishType
+      option: selectedOption.label,
+      basePrice: dish.price,
+      extraPrice: selectedOption.price,
+      finalPrice
     });
 
     try {
@@ -42,26 +56,43 @@ export default function DishCard({
       const savedCart = localStorage.getItem('cart');
       let cart = savedCart ? JSON.parse(savedCart) : [];
 
-      // Verificar si el plato ya está en el carrito
-      const existingItemIndex = cart.findIndex((item: any) => item.dishId === dish.id);
+      // Crear identificador único incluyendo la opción especial
+      const itemId = `${dish.id}_${selectedOption.type}`;
+
+      // Verificar si ya existe este plato con la misma opción
+      const existingItemIndex = cart.findIndex((item: any) =>
+        item.dishId === dish.id &&
+        item.selectedSpecialOption?.type === selectedOption.type
+      );
+
+      const cartItem = {
+        dishId: dish.id,
+        uniqueId: itemId,
+        dishName: `${dish.name} (${selectedOption.label})`,
+        basePrice: dish.price,
+        price: finalPrice,
+        quantity: 1,
+        image: dish.image || '/placeholder.jpg',
+        categoryId: dish.categoryId,          // ✅ AGREGADO
+        categoryName: dish.categoryName,
+        description: dish.description,
+        preparationTime: dish.preparationTime,
+        dishType: dish.dishType || 'normal',
+        // Guardar la opción especial seleccionada
+        selectedSpecialOption: {
+          type: selectedOption.type,
+          label: selectedOption.label,
+          price: selectedOption.price
+        },
+        hasSpecialOption: true
+      };
 
       if (existingItemIndex !== -1) {
         // Si existe, incrementar cantidad
         cart[existingItemIndex].quantity += 1;
       } else {
-        // Si no existe, agregar nuevo item con TODOS los datos del plato
-        cart.push({
-          dishId: dish.id,
-          dishName: dish.name,
-          price: dish.price,
-          quantity: 1,
-          image: dish.image || '/placeholder.jpg',
-          categoryName: dish.categoryName,
-          description: dish.description,
-          preparationTime: dish.preparationTime,
-          // NUEVO: Guardar dishType para el cobro adicional
-          dishType: dish.dishType || 'normal'
-        });
+        // Si no existe, agregar nuevo item
+        cart.push(cartItem);
       }
 
       // Guardar en localStorage
@@ -70,7 +101,61 @@ export default function DishCard({
       // Disparar evento para actualizar el navbar
       window.dispatchEvent(new Event('cartUpdated'));
 
-      // Mostrar mensaje de confirmación temporal
+      // Mostrar mensaje de confirmación
+      setShowAddedMessage(true);
+      setTimeout(() => setShowAddedMessage(false), 2000);
+
+      // Cerrar modal
+      setShowSpecialModal(false);
+      setPendingAction(null);
+
+    } catch (error) {
+      console.error('Error al agregar al carrito:', error);
+      alert('❌ Error al agregar al carrito');
+    }
+  };
+
+  // 🔥 FUNCIÓN CORREGIDA - AGREGAR categoryId
+  const addToCartNormal = () => {
+    if (!dish.isAvailable) return;
+
+    console.log('🍽️ AGREGANDO PLATO:', {
+      dishId: dish.id,
+      dishName: dish.name,
+      categoryId: dish.categoryId,        // 👈 VERIFICAR ESTO
+      categoryName: dish.categoryName
+    });
+
+    try {
+      const savedCart = localStorage.getItem('cart');
+      let cart = savedCart ? JSON.parse(savedCart) : [];
+
+      const existingItemIndex = cart.findIndex((item: any) => item.dishId === dish.id);
+
+      const newItem = {
+        dishId: dish.id,
+        dishName: dish.name,
+        price: dish.price,
+        quantity: 1,
+        image: dish.image || '/placeholder.jpg',
+        categoryId: dish.categoryId,       // 👈 ESTO DEBE ESTAR
+        categoryName: dish.categoryName,
+        description: dish.description,
+        preparationTime: dish.preparationTime,
+        dishType: dish.dishType || 'normal'
+      };
+
+      console.log('📦 ITEM A GUARDAR:', newItem);
+
+      if (existingItemIndex !== -1) {
+        cart[existingItemIndex].quantity += 1;
+      } else {
+        cart.push(newItem);
+      }
+
+      localStorage.setItem('cart', JSON.stringify(cart));
+      window.dispatchEvent(new Event('cartUpdated'));
+
       setShowAddedMessage(true);
       setTimeout(() => setShowAddedMessage(false), 2000);
 
@@ -88,7 +173,13 @@ export default function DishCard({
       return;
     }
 
-    addToCart();
+    // Si tiene opciones especiales, mostrar modal
+    if (hasSpecialOptions) {
+      setPendingAction('order');
+      setShowSpecialModal(true);
+    } else {
+      addToCartNormal();
+    }
   };
 
   const handleDeliveryClick = () => {
@@ -99,7 +190,13 @@ export default function DishCard({
       return;
     }
 
-    addToCart();
+    // Si tiene opciones especiales, mostrar modal
+    if (hasSpecialOptions) {
+      setPendingAction('delivery');
+      setShowSpecialModal(true);
+    } else {
+      addToCartNormal();
+    }
   };
 
   // Función para obtener el icono según el tipo de plato
@@ -127,13 +224,20 @@ export default function DishCard({
             {dish.categoryName}
           </span>
 
-          {/* NUEVO: Mostrar tipo en línea si no hay imagen */}
+          {/* Mostrar tipo en línea si no hay imagen */}
           {hideImage && dish.dishType && dish.dishType !== 'normal' && (
             <span className={`text-xs px-2 py-1 rounded-full font-semibold ${dish.dishType === 'sopa'
-                ? 'bg-blue-100 text-blue-800'
-                : 'bg-purple-100 text-purple-800'
+              ? 'bg-blue-100 text-blue-800'
+              : 'bg-purple-100 text-purple-800'
               }`}>
               {dish.dishType === 'sopa' ? '🍲 Sopa' : '🍱 Menú'}
+            </span>
+          )}
+
+          {/* NUEVO: Badge si tiene opciones especiales */}
+          {hasSpecialOptions && (
+            <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-semibold">
+              ✨ Elegir opción
             </span>
           )}
         </div>
@@ -173,7 +277,7 @@ export default function DishCard({
           </span>
 
           <div className="flex items-center gap-2">
-            {/* NUEVO: Mostrar información de sobrecargo si aplica */}
+            {/* Mostrar información de sobrecargo si aplica */}
             {dish.dishType && dish.dishType !== 'normal' && (
               <span className="text-xs text-gray-500">
                 {dish.dishType === 'sopa' ? '+S/0.50' : '+S/1.00'} en delivery
@@ -188,6 +292,21 @@ export default function DishCard({
             )}
           </div>
         </div>
+
+        {/* NUEVO: Vista previa de opciones especiales */}
+        {hasSpecialOptions && category?.specialOptions && (
+          <div className="mt-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+            <p className="text-xs font-medium text-gray-700 mb-1">Opciones disponibles:</p>
+            <div className="space-y-1">
+              {category.specialOptions.map((opt, idx) => (
+                <div key={idx} className="flex justify-between text-xs">
+                  <span className="text-gray-600">{opt.label}</span>
+                  <span className="font-semibold text-[#EC1F25]">+S/ {opt.price.toFixed(2)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Botones de acción */}
@@ -243,6 +362,21 @@ export default function DishCard({
           </div>
         )}
       </div>
+
+      {/* Modal de opciones especiales */}
+      {hasSpecialOptions && category?.specialOptions && (
+        <SpecialOptionModal
+          isOpen={showSpecialModal}
+          onClose={() => {
+            setShowSpecialModal(false);
+            setPendingAction(null);
+          }}
+          dishName={dish.name}
+          dishPrice={dish.price}
+          options={category.specialOptions}
+          onSelect={addToCartWithSpecialOption}
+        />
+      )}
     </div>
   );
 }

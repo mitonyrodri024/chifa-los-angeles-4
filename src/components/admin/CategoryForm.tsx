@@ -1,9 +1,9 @@
-// components/admin/CategoryForm.tsx
+// src/components/admin/CategoryForm.tsx
 'use client';
 
-import { Category } from '@/types/menu.types';
+import { Category, SpecialOptionConfig } from '@/types/menu.types';
 import { useState, useRef } from 'react';
-import { X, Upload, AlertCircle, Loader2, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Upload, AlertCircle, Loader2, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import Image from 'next/image';
 
 interface CategoryFormProps {
@@ -12,7 +12,6 @@ interface CategoryFormProps {
   onCancel: () => void;
   isLoading?: boolean;
   isEditing?: boolean;
-  
 }
 
 export default function CategoryForm({
@@ -29,7 +28,9 @@ export default function CategoryForm({
     icon: category?.icon || '',
     color: category?.color || '#EC1F25',
     order: category?.order || 0,
-    images: category?.images || [] // Array de imágenes (Base64 strings)
+    images: category?.images || [],
+    // Opciones especiales para checkout
+    specialOptions: category?.specialOptions || []
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -73,15 +74,12 @@ export default function CategoryForm({
     const newErrors: string[] = [];
     const validImages: string[] = [];
 
-    // Procesar cada archivo
     Array.from(files).forEach((file, index) => {
-      // Validar tamaño (1MB máximo por imagen)
       if (file.size > 1024 * 1024) {
         newErrors.push(`Imagen ${index + 1}: debe ser menor a 1MB`);
         return;
       }
 
-      // Validar tipo
       const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
       if (!validTypes.includes(file.type)) {
         newErrors.push(`Imagen ${index + 1}: formato no válido. Use JPG, PNG o WebP`);
@@ -94,7 +92,6 @@ export default function CategoryForm({
         const base64 = event.target?.result as string;
         validImages.push(base64);
         
-        // Si es la última imagen, actualizar el estado
         if (validImages.length + formData.images.length === files.length + formData.images.length) {
           setFormData(prev => ({
             ...prev,
@@ -124,7 +121,6 @@ export default function CategoryForm({
       images: prev.images.filter((_, index) => index !== indexToRemove)
     }));
     
-    // Ajustar el índice actual si es necesario
     if (currentImageIndex >= formData.images.length - 1) {
       setCurrentImageIndex(Math.max(0, formData.images.length - 2));
     }
@@ -154,7 +150,6 @@ export default function CategoryForm({
     const files = e.dataTransfer.files;
     
     if (files && files.length > 0) {
-      // Simular input file change con múltiples archivos
       const dataTransfer = new DataTransfer();
       Array.from(files).forEach(file => dataTransfer.items.add(file));
       if (fileInputRef.current) {
@@ -184,6 +179,38 @@ export default function CategoryForm({
     }
   };
 
+  // Manejar cambios en opciones especiales
+  const handleSpecialOptionChange = (index: number, field: keyof SpecialOptionConfig, value: any) => {
+    const newOptions = [...(formData.specialOptions || [])];
+    newOptions[index] = { ...newOptions[index], [field]: value };
+    
+    if (field === 'label' && !newOptions[index].type) {
+      newOptions[index].type = value.toLowerCase().replace(/\s+/g, '_');
+    }
+    
+    setFormData(prev => ({ ...prev, specialOptions: newOptions }));
+  };
+
+  // Agregar nueva opción especial
+  const addSpecialOption = () => {
+    const newOption: SpecialOptionConfig = {
+      type: `option_${Date.now()}`,
+      label: '',
+      price: 0,
+      description: ''
+    };
+    setFormData(prev => ({
+      ...prev,
+      specialOptions: [...(prev.specialOptions || []), newOption]
+    }));
+  };
+
+  // Eliminar opción especial
+  const removeSpecialOption = (index: number) => {
+    const newOptions = formData.specialOptions?.filter((_, i) => i !== index) || [];
+    setFormData(prev => ({ ...prev, specialOptions: newOptions }));
+  };
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -191,39 +218,51 @@ export default function CategoryForm({
       newErrors.name = 'El nombre es requerido';
     }
 
-    // La imagen ya no es obligatoria, pero si hay imágenes, están bien
-    if (formData.images.length > 0) {
-      // Validar que las imágenes sean válidas (ya se validaron al subir)
-    }
+    // Validar opciones especiales
+    formData.specialOptions?.forEach((opt, index) => {
+      if (!opt.label.trim()) {
+        newErrors[`specialOption_${index}`] = `La opción ${index + 1} necesita un nombre`;
+      }
+      if (opt.price <= 0) {
+        newErrors[`specialOptionPrice_${index}`] = `La opción ${index + 1} necesita un precio válido`;
+      }
+    });
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      const firstError = Object.keys(errors)[0];
-      if (firstError) {
-        const element = document.querySelector(`[name="${firstError}"]`);
-        element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-      return;
+  };const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (!validateForm()) {
+    const firstError = Object.keys(errors)[0];
+    if (firstError) {
+      const element = document.querySelector(`[name="${firstError}"]`);
+      element?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
+    return;
+  }
 
-    const categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'dishCount'> = {
-      name: formData.name.trim(),
-      description: formData.description.trim() || undefined,
-      isActive: formData.isActive,
-      icon: formData.icon || undefined,
-      color: formData.color,
-      order: formData.order,
-      images: formData.images // Array de imágenes Base64
-    };
-
-    onSubmit(categoryData);
+  const categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'dishCount'> = {
+    name: formData.name.trim(),
+    description: formData.description.trim() || undefined,
+    isActive: formData.isActive,
+    icon: formData.icon || undefined,
+    color: formData.color,
+    order: formData.order,
+    images: formData.images,
+    specialOptions: formData.specialOptions // Opciones para checkout
   };
+
+  // 🔥🔥🔥 LOG CRUCIAL 🔥🔥🔥
+  console.log('🔥🔥🔥 CATEGORY FORM - ENVIANDO DATOS:', {
+    name: categoryData.name,
+    specialOptions: categoryData.specialOptions,
+    specialOptionsCount: categoryData.specialOptions?.length || 0,
+    specialOptionsJSON: JSON.stringify(categoryData.specialOptions)
+  });
+
+  onSubmit(categoryData);
+};
 
   // Función para obtener el tamaño total de las imágenes
   const getTotalImagesSize = () => {
@@ -485,6 +524,135 @@ export default function CategoryForm({
                     )}
                   </>
                 )}
+              </div>
+            )}
+          </div>
+
+          {/* SECCIÓN DE OPCIONES PARA CHECKOUT */}
+          <div className="border-t border-gray-200 pt-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Opciones adicionales para checkout
+                </h3>
+                <p className="text-sm text-gray-500">
+                  Estas opciones aparecerán en el checkout para que el cliente elija (ej: Con Sopa +S/2.50, Con Wantán +S/2.00)
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={addSpecialOption}
+                className="flex items-center gap-2 px-4 py-2 bg-[#EC1F25] text-white font-medium rounded-lg hover:bg-[#d41a1f] transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Agregar Opción
+              </button>
+            </div>
+
+            {/* Lista de opciones */}
+            <div className="space-y-3">
+              {formData.specialOptions?.map((option, index) => (
+                <div key={index} className="flex gap-3 items-start bg-gray-50 p-4 rounded-lg border border-gray-200">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex gap-2">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Nombre de la opción
+                        </label>
+                        <input
+                          type="text"
+                          value={option.label}
+                          onChange={(e) => handleSpecialOptionChange(index, 'label', e.target.value)}
+                          placeholder="Ej: Con Sopa"
+                          className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                            errors[`specialOption_${index}`] ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        />
+                        {errors[`specialOption_${index}`] && (
+                          <p className="text-xs text-red-600 mt-1">{errors[`specialOption_${index}`]}</p>
+                        )}
+                      </div>
+                      <div className="w-32">
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Precio adicional
+                        </label>
+                        <input
+                          type="number"
+                          value={option.price}
+                          onChange={(e) => handleSpecialOptionChange(index, 'price', Number(e.target.value))}
+                          placeholder="0.00"
+                          step="0.50"
+                          min="0"
+                          className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                            errors[`specialOptionPrice_${index}`] ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-xs font-medium text-gray-500 mb-1">
+                        Descripción (opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={option.description || ''}
+                        onChange={(e) => handleSpecialOptionChange(index, 'description', e.target.value)}
+                        placeholder="Ej: Sopa wantán especial"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                      />
+                    </div>
+                    
+                    {errors[`specialOptionPrice_${index}`] && (
+                      <p className="text-xs text-red-600">{errors[`specialOptionPrice_${index}`]}</p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeSpecialOption(index)}
+                    className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors mt-6"
+                    title="Eliminar opción"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              ))}
+
+              {(!formData.specialOptions || formData.specialOptions.length === 0) && (
+                <div className="text-center py-8 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <p className="text-gray-500">No hay opciones configuradas</p>
+                  <p className="text-sm text-gray-400 mt-1">
+                    Haz clic en "Agregar Opción" para comenzar
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Vista previa de cómo se verán las opciones */}
+            {formData.specialOptions && formData.specialOptions.length > 0 && (
+              <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <h4 className="font-medium text-blue-900 mb-3 flex items-center gap-2">
+                  <span>👁️ Vista previa en checkout</span>
+                  <span className="text-xs bg-blue-200 text-blue-800 px-2 py-0.5 rounded-full">
+                    {formData.specialOptions.length} opción(es)
+                  </span>
+                </h4>
+                <div className="space-y-2">
+                  {formData.specialOptions.map((option, index) => (
+                    <div key={index} className="flex justify-between items-center text-sm bg-white p-3 rounded-lg border border-blue-100">
+                      <div>
+                        <span className="font-medium text-gray-900">{option.label || `Opción ${index + 1}`}</span>
+                        {option.description && (
+                          <span className="text-xs text-gray-500 ml-2">({option.description})</span>
+                        )}
+                      </div>
+                      <span className="font-semibold text-[#EC1F25]">+S/ {option.price.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <p className="text-xs text-blue-700 mt-2">
+                    * El cliente podrá elegir una de estas opciones al finalizar su pedido
+                  </p>
+                </div>
               </div>
             )}
           </div>

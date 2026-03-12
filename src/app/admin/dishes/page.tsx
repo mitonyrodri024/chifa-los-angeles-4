@@ -7,9 +7,11 @@ import { categoryService } from '@/lib/firebase/categoryService';
 import { dishService } from '@/lib/firebase/dishService';
 import {
   ArrowLeft, Plus, Edit2, Trash2, Eye, EyeOff,
-  Search, Filter, Loader2, AlertCircle, CheckCircle
+  Search, Filter, Loader2, AlertCircle, CheckCircle,
+  ChevronUp, ChevronDown, GripVertical, X
 } from 'lucide-react';
 import Link from 'next/link';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 interface Dish {
   id: string;
@@ -23,6 +25,7 @@ interface Dish {
   isSpicy: boolean;
   preparationTime?: number;
   ingredients?: string[];
+  order?: number; // 👈 NUEVO: Para reordenar
 }
 
 interface Category {
@@ -43,6 +46,12 @@ export default function AdminDishesPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  // 🔥 NUEVO: Estado para reordenamiento
+  const [isReordering, setIsReordering] = useState(false);
+  const [reorderCategory, setReorderCategory] = useState<string>('all');
+  const [categoryDishes, setCategoryDishes] = useState<Dish[]>([]);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
 
   // Cargar datos
   useEffect(() => {
@@ -73,16 +82,20 @@ export default function AdminDishesPage() {
             description: dish.description || '',
             preparationTime: dish.preparationTime || 15,
             ingredients: Array.isArray(dish.ingredients) ? dish.ingredients : [],
-            dishType: dish.dishType || 'normal' // ← FORZAR 'normal' SI NO EXISTE
+            dishType: dish.dishType || 'normal',
+            order: dish.order || 0 // 👈 Cargar el orden
           };
         });
 
-        console.log('Dishes con dishType:', dishesWithCategoryName.map(d => ({
+        // Ordenar por orden por defecto
+        const sortedDishes = dishesWithCategoryName.sort((a, b) => (a.order || 0) - (b.order || 0));
+
+        console.log('Dishes con orden:', sortedDishes.map(d => ({
           name: d.name,
-          dishType: d.dishType
+          order: d.order
         })));
 
-        setDishes(dishesWithCategoryName);
+        setDishes(sortedDishes);
       } catch (error) {
         console.error('Error al cargar datos:', error);
         setError('Error al cargar los platos');
@@ -93,6 +106,20 @@ export default function AdminDishesPage() {
 
     loadData();
   }, []);
+
+  // 🔥 NUEVO: Actualizar categoryDishes cuando cambia la categoría seleccionada para reorden
+  useEffect(() => {
+    if (reorderCategory === 'all') {
+      setCategoryDishes([]);
+      return;
+    }
+    
+    const filtered = dishes
+      .filter(dish => dish.categoryId === reorderCategory)
+      .sort((a, b) => (a.order || 0) - (b.order || 0));
+    
+    setCategoryDishes(filtered);
+  }, [reorderCategory, dishes]);
 
   // Filtrar platos
   const filteredDishes = dishes.filter(dish => {
@@ -110,8 +137,10 @@ export default function AdminDishesPage() {
     return matchesSearch && matchesCategory && matchesAvailability;
   });
 
-  // Ordenar por nombre
-  const sortedDishes = [...filteredDishes].sort((a, b) => a.name.localeCompare(b.name));
+  // Ordenar por nombre (cuando no está en modo reorden)
+  const sortedDishes = !isReordering 
+    ? [...filteredDishes].sort((a, b) => (a.order || 0) - (b.order || 0))
+    : filteredDishes;
 
   // Eliminar plato
   const handleDelete = async (dishId: string) => {
@@ -155,6 +184,68 @@ export default function AdminDishesPage() {
     }
   };
 
+  // 🔥 NUEVO: Manejar inicio de reorden
+  const handleStartReordering = () => {
+    setIsReordering(true);
+    setReorderCategory('all');
+  };
+
+  // 🔥 NUEVO: Cancelar reorden
+  const handleCancelReordering = () => {
+    setIsReordering(false);
+    setReorderCategory('all');
+    setCategoryDishes([]);
+  };
+
+  // 🔥 NUEVO: Manejar drag and drop
+  const handleDragEnd = async (result: any) => {
+    if (!result.destination) return;
+
+    const items = Array.from(categoryDishes);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+
+    setCategoryDishes(items);
+  };
+
+  // 🔥 NUEVO: Guardar nuevo orden
+  const handleSaveOrder = async () => {
+    setIsSavingOrder(true);
+    setError(null);
+
+    try {
+      // Actualizar el orden en el estado local
+      const updatedDishes = dishes.map(dish => {
+        const index = categoryDishes.findIndex(cd => cd.id === dish.id);
+        if (index !== -1) {
+          return { ...dish, order: index + 1 };
+        }
+        return dish;
+      });
+
+      setDishes(updatedDishes);
+
+      // Actualizar en Firebase (uno por uno o en lote)
+      for (let i = 0; i < categoryDishes.length; i++) {
+        const dish = categoryDishes[i];
+        await dishService.updateDish(dish.id, { order: i + 1 });
+      }
+
+      setSuccessMessage('✅ Orden guardado correctamente');
+      setTimeout(() => setSuccessMessage(null), 3000);
+      
+      // Salir del modo reorden
+      setIsReordering(false);
+      setReorderCategory('all');
+      setCategoryDishes([]);
+    } catch (error) {
+      console.error('Error al guardar orden:', error);
+      setError('Error al guardar el orden');
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
   return (
     <ProtectedAdmin>
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-8">
@@ -180,13 +271,48 @@ export default function AdminDishesPage() {
                 </div>
               </div>
 
-              <Link
-                href="/admin/dishes/add"
-                className="px-4 py-2 bg-[#F59E0B] hover:bg-yellow-600 text-white font-semibold rounded-lg transition-all hover:scale-105 flex items-center gap-2 shadow-md"
-              >
-                <Plus className="w-4 h-4" />
-                Nuevo Plato
-              </Link>
+              <div className="flex gap-3">
+                {!isReordering ? (
+                  <>
+                    <button
+                      onClick={handleStartReordering}
+                      className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-all hover:scale-105 flex items-center gap-2 shadow-md"
+                    >
+                      <GripVertical className="w-4 h-4" />
+                      Reordenar Platos
+                    </button>
+                    <Link
+                      href="/admin/dishes/add"
+                      className="px-4 py-2 bg-[#F59E0B] hover:bg-yellow-600 text-white font-semibold rounded-lg transition-all hover:scale-105 flex items-center gap-2 shadow-md"
+                    >
+                      <Plus className="w-4 h-4" />
+                      Nuevo Plato
+                    </Link>
+                  </>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleCancelReordering}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all flex items-center gap-2"
+                    >
+                      <X className="w-4 h-4" />
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleSaveOrder}
+                      disabled={reorderCategory === 'all' || categoryDishes.length === 0 || isSavingOrder}
+                      className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition-all flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isSavingOrder ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <CheckCircle className="w-4 h-4" />
+                      )}
+                      Guardar Orden
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Estadísticas */}
@@ -215,55 +341,93 @@ export default function AdminDishesPage() {
               </div>
             </div>
 
-            {/* Filtros */}
-            <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {/* Búsqueda */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Buscar plato..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent"
-                  />
-                </div>
+            {/* Filtros (ocultos en modo reorden) */}
+            {!isReordering && (
+              <div className="bg-white rounded-xl shadow border border-gray-200 p-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Búsqueda */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <input
+                      type="text"
+                      placeholder="Buscar plato..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent"
+                    />
+                  </div>
 
-                {/* Filtro por categoría */}
-                <div className="relative">
-                  <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <select
-                    value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent appearance-none bg-white"
-                  >
-                    <option value="all">Todas las categorías</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name} ({dishes.filter(d => d.categoryId === cat.id).length})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Filtro por categoría */}
+                  <div className="relative">
+                    <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => setSelectedCategory(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent appearance-none bg-white"
+                    >
+                      <option value="all">Todas las categorías</option>
+                      {categories.map(cat => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name} ({dishes.filter(d => d.categoryId === cat.id).length})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* Filtro disponibilidad */}
-                <label className="flex items-center gap-2 p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={showAvailableOnly}
-                    onChange={(e) => setShowAvailableOnly(e.target.checked)}
-                    className="w-4 h-4 text-[#EC1F25] rounded focus:ring-[#EC1F25]"
-                  />
-                  <span className="text-sm text-gray-700">Solo disponibles</span>
-                </label>
+                  {/* Filtro disponibilidad */}
+                  <label className="flex items-center gap-2 p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input
+                      type="checkbox"
+                      checked={showAvailableOnly}
+                      onChange={(e) => setShowAvailableOnly(e.target.checked)}
+                      className="w-4 h-4 text-[#EC1F25] rounded focus:ring-[#EC1F25]"
+                    />
+                    <span className="text-sm text-gray-700">Solo disponibles</span>
+                  </label>
 
-                {/* Resultados */}
-                <div className="flex items-center justify-end text-sm text-gray-500">
-                  {sortedDishes.length} {sortedDishes.length === 1 ? 'plato' : 'platos'} encontrados
+                  {/* Resultados */}
+                  <div className="flex items-center justify-end text-sm text-gray-500">
+                    {sortedDishes.length} {sortedDishes.length === 1 ? 'plato' : 'platos'} encontrados
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* 🔥 NUEVO: Selector de categoría para reorden */}
+            {isReordering && (
+              <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <div className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-blue-900 mb-2">
+                      Selecciona una categoría para reordenar sus platos
+                    </label>
+                    <select
+                      value={reorderCategory}
+                      onChange={(e) => setReorderCategory(e.target.value)}
+                      className="w-full max-w-md px-4 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="all">-- Selecciona una categoría --</option>
+                      {categories
+                        .filter(cat => cat.isActive)
+                        .map(cat => {
+                          const dishCount = dishes.filter(d => d.categoryId === cat.id).length;
+                          return (
+                            <option key={cat.id} value={cat.id} disabled={dishCount === 0}>
+                              {cat.name} ({dishCount} {dishCount === 1 ? 'plato' : 'platos'})
+                            </option>
+                          );
+                        })}
+                    </select>
+                  </div>
+                  {reorderCategory !== 'all' && categoryDishes.length > 0 && (
+                    <div className="text-sm text-blue-700">
+                      <p>Arrastra los platos para reordenarlos</p>
+                      <p className="text-xs mt-1">El orden se guardará al hacer clic en "Guardar Orden"</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Mensajes */}
@@ -290,6 +454,58 @@ export default function AdminDishesPage() {
             <div className="flex flex-col items-center justify-center py-20">
               <Loader2 className="w-12 h-12 text-[#EC1F25] animate-spin mb-4" />
               <p className="text-gray-600">Cargando platos...</p>
+            </div>
+          ) : isReordering && reorderCategory !== 'all' && categoryDishes.length > 0 ? (
+            /* 🔥 NUEVO: Interfaz de reorden con drag and drop */
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="dishes">
+                {(provided) => (
+                  <div
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                    className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden"
+                  >
+                    <div className="p-4 bg-gray-50 border-b border-gray-200">
+                      <h3 className="font-semibold text-gray-900">
+                        Reordenando: {categories.find(c => c.id === reorderCategory)?.name}
+                      </h3>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      {categoryDishes.map((dish, index) => (
+                        <Draggable key={dish.id} draggableId={dish.id} index={index}>
+                          {(provided, snapshot) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              className={`p-4 flex items-center gap-4 ${
+                                snapshot.isDragging ? 'bg-blue-50 shadow-lg' : 'bg-white'
+                              }`}
+                            >
+                              <div {...provided.dragHandleProps} className="cursor-move">
+                                <GripVertical className="w-5 h-5 text-gray-400" />
+                              </div>
+                              <div className="flex-1">
+                                <div className="font-medium text-gray-900">{dish.name}</div>
+                                <div className="text-sm text-gray-500">
+                                  S/ {dish.price.toFixed(2)} • {dish.isAvailable ? 'Disponible' : 'No disponible'}
+                                </div>
+                              </div>
+                              <div className="text-sm font-medium text-gray-500">
+                                #{index + 1}
+                              </div>
+                            </div>
+                          )}
+                        </Draggable>
+                      ))}
+                      {provided.placeholder}
+                    </div>
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
+          ) : isReordering && reorderCategory !== 'all' && categoryDishes.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-xl shadow border border-gray-200">
+              <p className="text-gray-600">No hay platos en esta categoría</p>
             </div>
           ) : sortedDishes.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl shadow border border-gray-200">
@@ -326,12 +542,15 @@ export default function AdminDishesPage() {
               )}
             </div>
           ) : (
-            /* TABLA DE PLATOS */
+            /* TABLA DE PLATOS (vista normal) */
             <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                        Orden
+                      </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                         Plato
                       </th>
@@ -355,6 +574,11 @@ export default function AdminDishesPage() {
                   <tbody className="divide-y divide-gray-200">
                     {sortedDishes.map((dish) => (
                       <tr key={dish.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-medium text-gray-500">
+                            #{dish.order || 0}
+                          </span>
+                        </td>
                         <td className="px-6 py-4">
                           <div>
                             <div className="font-medium text-gray-900">

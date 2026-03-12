@@ -12,7 +12,6 @@ import {
   updateDoc, 
   deleteDoc, 
   query,
-  orderBy,
   serverTimestamp,
   writeBatch
 } from 'firebase/firestore';
@@ -34,7 +33,7 @@ export class CategoryService {
         console.log(`📁 Categoría encontrada: ${doc.id}`, {
           name: data.name,
           imagesCount: data.images?.length || 0,
-          hasImages: !!data.images
+          specialOptionsCount: data.specialOptions?.length || 0
         });
         
         categories.push({
@@ -46,13 +45,13 @@ export class CategoryService {
           icon: data.icon || '🍽️',
           color: data.color || '#DC2626',
           order: data.order || 0,
-          images: data.images || [], // ✅ CAMPO IMAGES AGREGADO AQUÍ
+          images: data.images || [],
+          specialOptions: data.specialOptions || [],
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
         });
       });
       
-      // Ordenar por order
       return categories.sort((a, b) => (a.order || 0) - (b.order || 0));
     } catch (error) {
       console.error('❌ Error al obtener categorías:', error);
@@ -83,7 +82,8 @@ export class CategoryService {
         const data = docSnap.data();
         console.log(`📁 Categoría por ID ${id}:`, {
           name: data.name,
-          imagesCount: data.images?.length || 0
+          imagesCount: data.images?.length || 0,
+          specialOptionsCount: data.specialOptions?.length || 0
         });
         
         return {
@@ -95,7 +95,8 @@ export class CategoryService {
           icon: data.icon || '🍽️',
           color: data.color || '#DC2626',
           order: data.order || 0,
-          images: data.images || [], // ✅ CAMPO IMAGES AGREGADO AQUÍ
+          images: data.images || [],
+          specialOptions: data.specialOptions || [],
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
         };
@@ -108,30 +109,15 @@ export class CategoryService {
     }
   }
 
-  // Obtener categorías con conteo de platos
-  async getCategoriesWithCount(): Promise<Category[]> {
-    try {
-      const categories = await this.getAllCategories();
-      
-      return categories.map(category => ({
-        ...category,
-        dishCount: category.dishCount || 0,
-      }));
-    } catch (error) {
-      console.error('❌ Error al obtener categorías con conteo:', error);
-      return [];
-    }
-  }
-
   // Agregar nueva categoría
   async addCategory(categoryData: Omit<Category, 'id' | 'dishCount' | 'createdAt' | 'updatedAt'>): Promise<Category | null> {
     try {
       console.log('➕ Intentando agregar categoría:', {
         name: categoryData.name,
-        imagesCount: categoryData.images?.length || 0
+        imagesCount: categoryData.images?.length || 0,
+        specialOptionsCount: categoryData.specialOptions?.length || 0
       });
       
-      // Obtener el siguiente orden
       const categories = await this.getAllCategories();
       const maxOrder = categories.length > 0 
         ? Math.max(...categories.map(c => c.order || 0)) 
@@ -145,14 +131,16 @@ export class CategoryService {
         icon: categoryData.icon || '🍽️',
         color: categoryData.color || '#DC2626',
         order: maxOrder + 1,
-        images: categoryData.images || [], // ✅ GUARDAR IMÁGENES
+        images: categoryData.images || [],
+        specialOptions: categoryData.specialOptions || [],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
       
       console.log('📤 Datos a guardar:', {
         name: categoryToSave.name,
-        imagesCount: categoryToSave.images.length
+        imagesCount: categoryToSave.images.length,
+        specialOptionsCount: categoryToSave.specialOptions.length,
       });
       
       const docRef = await addDoc(collection(db, CATEGORIES_COLLECTION), categoryToSave);
@@ -169,28 +157,64 @@ export class CategoryService {
       };
     } catch (error: any) {
       console.error('❌ Error al agregar categoría:', error);
-      console.error('Error details:', error.message, error.stack);
       return null;
     }
   }
 
-  // Actualizar categoría
+  // 🔥🔥🔥 MÉTODO UPDATE CATEGORY COMPLETAMENTE CORREGIDO 🔥🔥🔥
   async updateCategory(id: string, updates: Partial<Category>): Promise<boolean> {
     try {
       const docRef = doc(db, CATEGORIES_COLLECTION, id);
       
-      console.log(`✏️ Actualizando categoría ${id}:`, {
-        updates: Object.keys(updates),
-        hasImages: 'images' in updates,
-        imagesCount: updates.images?.length || 0
+      console.log(`✏️ ACTUALIZANDO categoría ${id}:`, {
+        camposRecibidos: Object.keys(updates),
+        tieneSpecialOptions: updates.specialOptions !== undefined,
+        cantidadSpecialOptions: updates.specialOptions?.length || 0,
+        specialOptions: updates.specialOptions
       });
-      
-      await updateDoc(docRef, {
-        ...updates,
+
+      // CONSTRUIR OBJETO EXPLÍCITAMENTE - SIN USAR SPREAD OPERATOR
+      const firestoreData: any = {
         updatedAt: serverTimestamp(),
+      };
+
+      // AGREGAR CAMPOS SOLO SI VIENEN EN updates
+      if (updates.name !== undefined) firestoreData.name = updates.name;
+      if (updates.description !== undefined) firestoreData.description = updates.description;
+      if (updates.isActive !== undefined) firestoreData.isActive = updates.isActive;
+      if (updates.icon !== undefined) firestoreData.icon = updates.icon;
+      if (updates.color !== undefined) firestoreData.color = updates.color;
+      if (updates.order !== undefined) firestoreData.order = updates.order;
+      if (updates.images !== undefined) firestoreData.images = updates.images;
+
+      // 🔥🔥🔥 MANEJAR SPECIALOPTIONS DE FORMA ESPECIAL 🔥🔥🔥
+      if (updates.specialOptions !== undefined) {
+        // Limpiar y formatear las opciones
+        firestoreData.specialOptions = updates.specialOptions.map(opt => ({
+          type: opt.type || '',
+          label: opt.label || '',
+          price: Number(opt.price) || 0,
+          description: opt.description || ''
+        }));
+        
+        console.log('✅ SPECIALOPTIONS AGREGADOS:', {
+          cantidad: firestoreData.specialOptions.length,
+          datos: firestoreData.specialOptions
+        });
+      } else {
+        // Si no se enviaron specialOptions, mantener las existentes
+        console.log('ℹ️ No se enviaron specialOptions, se mantienen las existentes');
+      }
+
+      console.log('📦 DATOS FINALES A FIRESTORE:', {
+        campos: Object.keys(firestoreData),
+        tieneSpecialOptions: 'specialOptions' in firestoreData,
+        cantidadSpecialOptions: firestoreData.specialOptions?.length || 0
       });
+
+      await updateDoc(docRef, firestoreData);
       
-      console.log('✅ Categoría actualizada');
+      console.log('✅ Categoría actualizada exitosamente');
       return true;
     } catch (error) {
       console.error('❌ Error al actualizar categoría:', error);
@@ -201,7 +225,6 @@ export class CategoryService {
   // Eliminar categoría
   async deleteCategory(id: string): Promise<{ success: boolean; message: string }> {
     try {
-      // Importar dishService dinámicamente para verificar platos
       const { dishService } = await import('./dishService');
       const dishes = await dishService.getAllDishes();
       const dishesInCategory = dishes.filter(dish => dish.categoryId === id);
@@ -216,7 +239,6 @@ export class CategoryService {
       const docRef = doc(db, CATEGORIES_COLLECTION, id);
       await deleteDoc(docRef);
       
-      // Reordenar las categorías restantes
       await this.reorderAfterDelete();
       
       return { success: true, message: 'Categoría eliminada exitosamente' };

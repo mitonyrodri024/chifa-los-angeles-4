@@ -8,8 +8,8 @@ import CategoryForm from '@/components/admin/CategoryForm';
 import { Category } from '@/types/menu.types';
 import { categoryService } from '@/lib/firebase/categoryService';
 import { dishService } from '@/lib/firebase/dishService';
-import { 
-  ArrowLeft, Plus, Edit2, Trash2, Eye, EyeOff, Check, X, 
+import {
+  ArrowLeft, Plus, Edit2, Trash2, Eye, EyeOff, Check, X,
   ChevronUp, ChevronDown, RefreshCw, Image as ImageIcon,
   ChevronLeft, ChevronRight
 } from 'lucide-react';
@@ -61,10 +61,12 @@ export default function CategoriesPage() {
   }, []);
 
   // Manejar envío del formulario
+  // Manejar envío del formulario - VERSIÓN CORREGIDA
   const handleSubmit = async (categoryData: CategoryFormData) => {
     setIsLoading(true);
 
     try {
+      // 🔥 INCLUIR TODOS LOS CAMPOS, ESPECIALMENTE specialOptions
       const dataToSend: CategoryFormData = {
         name: categoryData.name.trim(),
         description: categoryData.description || '',
@@ -72,8 +74,15 @@ export default function CategoriesPage() {
         icon: categoryData.icon || '🍽️',
         color: categoryData.color || '#DC2626',
         order: categoryData.order || 1,
-        images: categoryData.images || []
+        images: categoryData.images || [],
+        // 👈 AGREGAR SPECIALOPTIONS AQUÍ
+        specialOptions: categoryData.specialOptions || []
       };
+
+      console.log('📤 Enviando datos a Firebase:', {
+        ...dataToSend,
+        specialOptionsCount: dataToSend.specialOptions?.length || 0
+      });
 
       if (editingCategory) {
         const success = await categoryService.updateCategory(editingCategory.id, dataToSend);
@@ -139,7 +148,7 @@ export default function CategoriesPage() {
 
   const handleReorder = async (direction: 'up' | 'down', index: number) => {
     if (!showReorder) return;
-    
+
     const newCategories = [...categories];
     if (direction === 'up' && index > 0) {
       [newCategories[index], newCategories[index - 1]] = [newCategories[index - 1], newCategories[index]];
@@ -164,29 +173,29 @@ export default function CategoriesPage() {
   };
 
   // Componente Modal para ver imágenes (MEJORADO)
-  const ImageViewerModal = ({ 
-    categoryId, 
-    onClose 
-  }: { 
-    categoryId: string | null; 
+  const ImageViewerModal = ({
+    categoryId,
+    onClose
+  }: {
+    categoryId: string | null;
     onClose: () => void;
   }) => {
     const [currentIndex, setCurrentIndex] = useState(0);
     const category = categories.find(c => c.id === categoryId);
-    
+
     // Verificaciones de seguridad
     if (!categoryId || !category) return null;
-    
+
     const images = category.images || [];
     if (images.length === 0) {
       // Si no hay imágenes, mostrar mensaje
       return (
-        <div 
-          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" 
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
           onClick={onClose}
         >
-          <div 
-            className="relative max-w-md w-full bg-white rounded-xl overflow-hidden" 
+          <div
+            className="relative max-w-md w-full bg-white rounded-xl overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             <div className="p-6 text-center">
@@ -208,16 +217,16 @@ export default function CategoriesPage() {
         </div>
       );
     }
-    
+
     const currentImage = images[currentIndex];
-    
+
     return (
-      <div 
-        className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" 
+      <div
+        className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
         onClick={onClose}
       >
-        <div 
-          className="relative max-w-4xl w-full bg-white rounded-xl overflow-hidden" 
+        <div
+          className="relative max-w-4xl w-full bg-white rounded-xl overflow-hidden"
           onClick={e => e.stopPropagation()}
         >
           {/* Header */}
@@ -230,14 +239,14 @@ export default function CategoriesPage() {
                 {images.length} {images.length === 1 ? 'imagen' : 'imágenes'}
               </p>
             </div>
-            <button 
-              onClick={onClose} 
+            <button
+              onClick={onClose}
               className="p-1 hover:bg-gray-200 rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
-          
+
           {/* Visor principal */}
           <div className="relative h-96 bg-gray-900">
             <Image
@@ -247,7 +256,7 @@ export default function CategoriesPage() {
               className="object-contain"
               priority
             />
-            
+
             {images.length > 1 && (
               <>
                 <button
@@ -270,16 +279,15 @@ export default function CategoriesPage() {
               </>
             )}
           </div>
-          
+
           {/* Miniaturas */}
           {images.length > 1 && (
             <div className="p-4 bg-gray-100 grid grid-cols-5 gap-2">
               {images.map((img, idx) => (
                 <div
                   key={idx}
-                  className={`relative h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${
-                    idx === currentIndex ? 'border-[#EC1F25] scale-105' : 'border-transparent hover:scale-105'
-                  }`}
+                  className={`relative h-16 rounded-lg overflow-hidden cursor-pointer border-2 transition-all ${idx === currentIndex ? 'border-[#EC1F25] scale-105' : 'border-transparent hover:scale-105'
+                    }`}
                   onClick={() => setCurrentIndex(idx)}
                 >
                   <Image
@@ -342,11 +350,10 @@ export default function CategoriesPage() {
 
                 <button
                   onClick={() => setShowReorder(!showReorder)}
-                  className={`px-4 py-2 border rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                    showReorder 
-                      ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700' 
+                  className={`px-4 py-2 border rounded-lg font-medium transition-colors flex items-center gap-2 ${showReorder
+                      ? 'bg-blue-600 text-white border-blue-600 hover:bg-blue-700'
                       : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                  }`}
+                    }`}
                 >
                   {showReorder ? (
                     <>
@@ -496,8 +503,8 @@ export default function CategoriesPage() {
 }
 
 // Componente de tarjeta de categoría (MEJORADO PARA MOSTRAR MÚLTIPLES IMÁGENES)
-function CategoryCard({ 
-  category, 
+function CategoryCard({
+  category,
   index,
   showReorder,
   isFirst,
@@ -577,7 +584,7 @@ function CategoryCard({
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 200px"
               />
-              
+
               {/* Indicador de navegación */}
               {images.length > 1 && (
                 <>
@@ -599,7 +606,7 @@ function CategoryCard({
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>
-                  
+
                   {/* Contador */}
                   <div className="absolute bottom-1 right-1 bg-black/50 text-white text-xs px-1.5 py-0.5 rounded">
                     {currentImageIndex + 1}/{images.length}
@@ -613,16 +620,15 @@ function CategoryCard({
               {images.slice(0, 4).map((img, idx) => (
                 <div
                   key={idx}
-                  className={`relative h-12 bg-gray-100 rounded-lg overflow-hidden cursor-pointer transition-all ${
-                    idx === currentImageIndex ? 'ring-2 ring-[#EC1F25]' : 'hover:opacity-75'
-                  }`}
+                  className={`relative h-12 bg-gray-100 rounded-lg overflow-hidden cursor-pointer transition-all ${idx === currentImageIndex ? 'ring-2 ring-[#EC1F25]' : 'hover:opacity-75'
+                    }`}
                   onClick={() => setCurrentImageIndex(idx)}
                 >
-                  <Image 
-                    src={img} 
-                    alt={`${category.name} miniatura ${idx + 1}`} 
-                    fill 
-                    className="object-cover" 
+                  <Image
+                    src={img}
+                    alt={`${category.name} miniatura ${idx + 1}`}
+                    fill
+                    className="object-cover"
                   />
                 </div>
               ))}
@@ -635,7 +641,7 @@ function CategoryCard({
                 </div>
               )}
             </div>
-            
+
             {/* Indicador de cantidad */}
             <div className="flex items-center justify-between mt-2">
               <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -671,11 +677,10 @@ function CategoryCard({
               <button
                 onClick={() => onReorder('up')}
                 disabled={isFirst}
-                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 ${
-                  isFirst
+                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 ${isFirst
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                }`}
+                  }`}
               >
                 <ChevronUp className="w-4 h-4" />
                 Subir
@@ -683,11 +688,10 @@ function CategoryCard({
               <button
                 onClick={() => onReorder('down')}
                 disabled={isLast}
-                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 ${
-                  isLast
+                className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 ${isLast
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-blue-50 text-blue-700 hover:bg-blue-100'
-                }`}
+                  }`}
               >
                 <ChevronDown className="w-4 h-4" />
                 Bajar
@@ -696,16 +700,16 @@ function CategoryCard({
           ) : (
             <>
               <ActionButton onClick={onEdit} bgColor="blue" icon={<Edit2 className="w-4 h-4" />} text="Editar" />
-              <ActionButton 
-                onClick={onToggleStatus} 
-                bgColor={category.isActive ? 'yellow' : 'green'} 
+              <ActionButton
+                onClick={onToggleStatus}
+                bgColor={category.isActive ? 'yellow' : 'green'}
                 icon={category.isActive ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 text={category.isActive ? 'Desactivar' : 'Activar'}
               />
-              <ActionButton 
-                onClick={onDelete} 
-                bgColor="red" 
-                icon={<Trash2 className="w-4 h-4" />} 
+              <ActionButton
+                onClick={onDelete}
+                bgColor="red"
+                icon={<Trash2 className="w-4 h-4" />}
                 text="Eliminar"
                 disabled={category.dishCount > 0}
                 title={category.dishCount > 0 ? 'Tiene platos asociados' : ''}
@@ -721,25 +725,24 @@ function CategoryCard({
 // Componentes auxiliares
 function StatusBadge({ isActive }: { isActive: boolean }) {
   return (
-    <span className={`text-xs px-2 py-1 rounded-full font-medium ${
-      isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-    }`}>
+    <span className={`text-xs px-2 py-1 rounded-full font-medium ${isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+      }`}>
       {isActive ? 'Activa' : 'Inactiva'}
     </span>
   );
 }
 
-function ActionButton({ 
-  onClick, 
-  bgColor, 
-  icon, 
-  text, 
+function ActionButton({
+  onClick,
+  bgColor,
+  icon,
+  text,
   disabled = false,
   title = ''
-}: { 
-  onClick: () => void; 
-  bgColor: 'blue' | 'yellow' | 'green' | 'red'; 
-  icon: React.ReactNode; 
+}: {
+  onClick: () => void;
+  bgColor: 'blue' | 'yellow' | 'green' | 'red';
+  icon: React.ReactNode;
   text: string;
   disabled?: boolean;
   title?: string;
@@ -755,9 +758,8 @@ function ActionButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors ${
-        disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : colors[bgColor]
-      }`}
+      className={`flex-1 py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors ${disabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : colors[bgColor]
+        }`}
       title={title}
     >
       {icon}

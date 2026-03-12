@@ -43,7 +43,7 @@ export default function EditDishPage() {
 
         if (dishData) {
           console.log('✅ Plato cargado:', dishData);
-          console.log('✅ dishType recibido:', dishData.dishType); // ← VERIFICAR
+          console.log('✅ dishType recibido:', dishData.dishType);
 
           // Asegurar que dishType tenga un valor por defecto
           if (!dishData.dishType) {
@@ -66,8 +66,6 @@ export default function EditDishPage() {
 
     loadData();
   }, [dishId, router]);
-  // src/app/admin/dishes/edit/[id]/page.tsx
-  // (solo muestro la parte del handleSubmit que cambia)
 
   const handleSubmit = async (dishData: any) => {
     setIsSaving(true);
@@ -93,7 +91,18 @@ export default function EditDishPage() {
         throw new Error('El precio debe ser mayor a 0');
       }
 
-      // Preparar datos para actualizar - INCLUYENDO dishType
+      // 🔥 VERIFICAR: Si la categoría tiene opciones especiales, forzar dishType = 'normal'
+      const hasSpecialOptions = selectedCategory.specialOptions && selectedCategory.specialOptions.length > 0;
+      const finalDishType = hasSpecialOptions ? 'normal' : (dishData.dishType || 'normal');
+
+      console.log('🔍 Verificación de categoría:', {
+        categoryName: selectedCategory.name,
+        hasSpecialOptions,
+        dishTypeRecibido: dishData.dishType,
+        finalDishType
+      });
+
+      // Preparar datos para actualizar
       const dishToUpdate = {
         name: dishData.name.trim(),
         description: dishData.description?.trim() || '',
@@ -110,7 +119,7 @@ export default function EditDishPage() {
           : (typeof dishData.ingredients === 'string' && dishData.ingredients
             ? dishData.ingredients.split(',').map((i: string) => i.trim()).filter((i: string) => i)
             : []),
-        dishType: dishData.dishType || 'normal', // ← NUEVO: actualizar tipo de plato
+        dishType: finalDishType, // ← USAR EL VALOR CORREGIDO
         updatedAt: new Date(),
       };
 

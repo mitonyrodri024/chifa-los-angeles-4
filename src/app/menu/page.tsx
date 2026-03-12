@@ -42,6 +42,15 @@ export default function MenuPage() {
       setIsLoading(true);
       try {
         const dishesData = await dishService.getAllDishes();
+        
+        // 🔥 LOG PARA VERIFICAR QUE LOS PLATOS TIENEN categoryId
+        console.log('📦 PLATOS CARGADOS:', dishesData.map(d => ({
+          id: d.id,
+          name: d.name,
+          categoryId: d.categoryId,
+          categoryName: d.categoryName
+        })));
+        
         setDishes(dishesData);
       } catch (error) {
         console.error('Error al cargar datos:', error);
@@ -58,7 +67,9 @@ export default function MenuPage() {
     const savedCart = localStorage.getItem('cart');
     if (savedCart) {
       try {
-        setCartItems(JSON.parse(savedCart));
+        const parsedCart = JSON.parse(savedCart);
+        console.log('🛒 Carrito cargado desde localStorage:', parsedCart);
+        setCartItems(parsedCart);
       } catch (error) {
         console.error('Error al cargar carrito:', error);
       }
@@ -69,27 +80,58 @@ export default function MenuPage() {
   useEffect(() => {
     if (cartItems.length > 0) {
       localStorage.setItem('cart', JSON.stringify(cartItems));
+      console.log('💾 Carrito guardado en localStorage:', cartItems);
     } else {
       localStorage.removeItem('cart');
     }
     window.dispatchEvent(new Event('cartUpdated'));
   }, [cartItems]);
 
+  // 🔥 FUNCIÓN CORREGIDA - handleOrder
   const handleOrder = async (dish: Dish) => {
-    const existingItemIndex = cartItems.findIndex(item => item.dishId === dish.id);
-    if (existingItemIndex >= 0) {
-      const updatedCart = [...cartItems];
-      updatedCart[existingItemIndex].quantity += 1;
-      setCartItems(updatedCart);
-    } else {
-      setCartItems([...cartItems, {
-        dishId: dish.id,
-        dishName: dish.name,
-        price: dish.price,
-        quantity: 1,
-        image: dish.image,
-      }]);
+    console.log('🔥🔥🔥 AGREGANDO PLATO:', {
+      dishId: dish.id,
+      dishName: dish.name,
+      categoryId: dish.categoryId,
+      categoryName: dish.categoryName,
+      dishType: dish.dishType
+    });
+
+    // Verificar que el plato tiene categoryId
+    if (!dish.categoryId) {
+      console.error('❌ ERROR: El plato no tiene categoryId:', dish);
+      alert('Error: El plato no tiene categoría asignada');
+      return;
     }
+
+    const existingItemIndex = cartItems.findIndex(item => item.dishId === dish.id);
+
+    const newItem = {
+      dishId: dish.id,
+      dishName: dish.name,
+      price: dish.price,
+      quantity: 1,
+      image: dish.image || '/placeholder.jpg',
+      categoryId: dish.categoryId,        // 👈 ESTO ES CRÍTICO
+      categoryName: dish.categoryName,
+      description: dish.description,
+      preparationTime: dish.preparationTime,
+      dishType: dish.dishType || 'normal'
+    };
+
+    console.log('📦 ITEM A GUARDAR:', newItem);
+
+    let updatedCart;
+    if (existingItemIndex >= 0) {
+      updatedCart = [...cartItems];
+      updatedCart[existingItemIndex].quantity += 1;
+      console.log('🔄 Cantidad actualizada:', updatedCart[existingItemIndex]);
+    } else {
+      updatedCart = [...cartItems, newItem];
+      console.log('✅ Nuevo item agregado:', newItem);
+    }
+
+    setCartItems(updatedCart);
     alert(`✅ "${dish.name}" agregado al carrito`);
   };
 
@@ -115,17 +157,14 @@ export default function MenuPage() {
 
   return (
     <main className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
-      
-      {/* Botón para volver al inicio */}
-      
-
       <div className="max-w-7xl mx-auto px-4 py-8">
 
-        {/* Header con categorías - SIN título, SIN buscador, SOLO categorías */}
+        {/* Header con categorías */}
         <MenuHeader
           user={user as any}
           categories={categories}
           dishes={dishes}
+           
           onPrevCategory={goToPrevCategory}
           onNextCategory={goToNextCategory}
           currentCategoryIndex={currentCategoryIndex}

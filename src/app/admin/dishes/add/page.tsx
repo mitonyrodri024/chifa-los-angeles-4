@@ -44,11 +44,6 @@ export default function AddDishPage() {
     loadData();
   }, []);
 
-  // app/admin/dishes/add/page.tsx (parte del handleSubmit)
-
-  // src/app/admin/dishes/add/page.tsx
-  // (solo muestro la parte del handleSubmit que cambia)
-
   const handleSubmit = async (dishData: any) => {
     setIsLoading(true);
     setError(null);
@@ -65,7 +60,18 @@ export default function AddDishPage() {
         throw new Error('Categoría seleccionada no encontrada');
       }
 
-      // Preparar datos para guardar - INCLUYENDO dishType
+      // 🔥 VERIFICAR: Si la categoría tiene opciones especiales, forzar dishType = 'normal'
+      const hasSpecialOptions = selectedCategory.specialOptions && selectedCategory.specialOptions.length > 0;
+      const finalDishType = hasSpecialOptions ? 'normal' : (dishData.dishType || 'normal');
+
+      console.log('🔍 Verificación de categoría:', {
+        categoryName: selectedCategory.name,
+        hasSpecialOptions,
+        dishTypeRecibido: dishData.dishType,
+        finalDishType
+      });
+
+      // Preparar datos para guardar
       const dishToSave = {
         name: dishData.name.trim(),
         description: dishData.description.trim(),
@@ -82,7 +88,7 @@ export default function AddDishPage() {
           : (typeof dishData.ingredients === 'string' && dishData.ingredients
             ? dishData.ingredients.split(',').map((i: string) => i.trim()).filter((i: string) => i)
             : []),
-        dishType: dishData.dishType || 'normal', // ← NUEVO: guardar tipo de plato
+        dishType: finalDishType, // ← USAR EL VALOR CORREGIDO
       };
 
       console.log('💾 Guardando plato:', dishToSave);
@@ -110,7 +116,7 @@ export default function AddDishPage() {
   };
 
   const handleCancel = () => {
-    router.push('/admin/dishes'); // ← Cambié a /admin/dishes en lugar de /
+    router.push('/admin/dishes');
   };
 
   return (
@@ -122,7 +128,7 @@ export default function AddDishPage() {
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
                 <Link
-                  href="/admin/dishes" // ← Cambié a /admin/dishes
+                  href="/admin/dishes"
                   className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   <ArrowLeft className="w-6 h-6 text-gray-600" />
@@ -213,7 +219,7 @@ export default function AddDishPage() {
             </div>
           ) : (
             <>
-              {/* Formulario - AHORA SIN IMAGEN */}
+              {/* Formulario */}
               <DishForm
                 categories={categories.filter(c => c.isActive)}
                 onSubmit={handleSubmit}
@@ -221,7 +227,7 @@ export default function AddDishPage() {
                 isLoading={isLoading}
               />
 
-              {/* Información útil - Actualizada sin mencionar imágenes */}
+              {/* Información útil */}
               <div className="mt-8 p-6 bg-white rounded-xl shadow border border-gray-200">
                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
                   📝 Consejos para agregar platos

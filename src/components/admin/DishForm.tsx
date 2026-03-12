@@ -3,7 +3,7 @@
 
 import { Dish } from '@/types/menu.types';
 import { Category } from '@/types/menu.types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, AlertCircle, Loader2, Soup, Menu, Utensils } from 'lucide-react';
 
 interface DishFormProps {
@@ -33,11 +33,25 @@ export default function DishForm({
     isSpicy: dish?.isSpicy ?? false,
     preparationTime: dish?.preparationTime || 15,
     ingredients: dish?.ingredients?.join(', ') || '',
-    // NUEVO: Campo para tipo de plato
     dishType: dish?.dishType || 'normal',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+
+  // Actualizar la categoría seleccionada cuando cambia categoryId
+  useEffect(() => {
+    const category = categories.find(c => c.id === formData.categoryId) || null;
+    setSelectedCategory(category);
+    
+    // 🔥 SI LA CATEGORÍA TIENE OPCIONES ESPECIALES, FORZAR dishType = 'normal'
+    if (category?.specialOptions && category.specialOptions.length > 0) {
+      setFormData(prev => ({ ...prev, dishType: 'normal' }));
+    }
+  }, [formData.categoryId, categories]);
+
+  // Verificar si la categoría seleccionada tiene opciones especiales
+  const hasSpecialOptions = selectedCategory?.specialOptions && selectedCategory.specialOptions.length > 0;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -101,7 +115,7 @@ export default function DishForm({
       name: formData.name.trim(),
       description: formData.description.trim(),
       price: formData.price,
-      image: dish?.image || '', // Mantener imagen existente o string vacío
+      image: dish?.image || '',
       categoryId: formData.categoryId,
       categoryName: categories.find(c => c.id === formData.categoryId)?.name || '',
       isAvailable: formData.isAvailable,
@@ -109,7 +123,7 @@ export default function DishForm({
       isSpicy: formData.isSpicy,
       preparationTime: formData.preparationTime,
       ingredients: formData.ingredients.split(',').map(i => i.trim()).filter(i => i),
-      dishType: formData.dishType, // ← NUEVO: incluir tipo de plato
+      dishType: formData.dishType,
     };
 
     onSubmit(dishData);
@@ -268,7 +282,7 @@ export default function DishForm({
               <option value="">Selecciona una categoría</option>
               {categories.map(category => (
                 <option key={category.id} value={category.id}>
-                  {category.name}
+                  {category.name} {category.specialOptions?.length ? '✨' : ''}
                 </option>
               ))}
             </select>
@@ -278,9 +292,19 @@ export default function DishForm({
                 {errors.categoryId}
               </p>
             )}
+            
+            {/* Mensaje si la categoría tiene opciones especiales */}
+            {hasSpecialOptions && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-xs text-green-700 flex items-center gap-1">
+                  <span>✨</span>
+                  Esta categoría tiene opciones especiales en checkout
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* NUEVO: Tipo de Plato */}
+          {/* Tipo de Plato - MODIFICADO */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Tipo de Plato *
@@ -289,18 +313,29 @@ export default function DishForm({
               name="dishType"
               value={formData.dishType}
               onChange={handleChange}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent"
+              disabled={hasSpecialOptions} // 🔥 DESHABILITAR si la categoría tiene opciones especiales
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-[#EC1F25] focus:border-transparent ${
+                hasSpecialOptions ? 'bg-gray-100 cursor-not-allowed' : ''
+              }`}
             >
               <option value="normal">🍽️ Normal (sin recargo)</option>
               <option value="sopa">🍲 Sopa (+S/0.50 en delivery)</option>
               <option value="menu">🍱 Menú (+S/1.00 en delivery)</option>
             </select>
+            
+            {/* Mensaje explicativo */}
             <p className="mt-1 text-xs text-gray-500 flex items-center gap-1">
               {getDishTypeIcon(formData.dishType)}
               <span>
-                {formData.dishType === 'sopa' && 'Las sopas tienen un recargo de S/0.50 en delivery'}
-                {formData.dishType === 'menu' && 'Los menús tienen un recargo de S/1.00 en delivery'}
-                {formData.dishType === 'normal' && 'Los platos normales no tienen recargo adicional'}
+                {hasSpecialOptions ? (
+                  '✅ Los recargos se manejan por categoría en checkout'
+                ) : formData.dishType === 'sopa' ? (
+                  'Las sopas tienen un recargo de S/0.50 en delivery'
+                ) : formData.dishType === 'menu' ? (
+                  'Los menús tienen un recargo de S/1.00 en delivery'
+                ) : (
+                  'Los platos normales no tienen recargo adicional'
+                )}
               </span>
             </p>
           </div>
@@ -361,13 +396,15 @@ export default function DishForm({
 
           {/* Indicador visual del tipo seleccionado */}
           <div className={`p-4 border-2 rounded-lg flex items-center justify-center gap-2 ${
+            hasSpecialOptions ? 'border-green-500 bg-green-50' :
             formData.dishType === 'sopa' ? 'border-blue-500 bg-blue-50' :
             formData.dishType === 'menu' ? 'border-purple-500 bg-purple-50' :
             'border-gray-300 bg-gray-50'
           }`}>
-            {getDishTypeIcon(formData.dishType)}
+            {hasSpecialOptions ? '✨' : getDishTypeIcon(formData.dishType)}
             <span className="font-medium">
-              {formData.dishType === 'sopa' ? 'Sopa' :
+              {hasSpecialOptions ? 'Opciones en checkout' :
+               formData.dishType === 'sopa' ? 'Sopa' :
                formData.dishType === 'menu' ? 'Menú' : 'Normal'}
             </span>
           </div>

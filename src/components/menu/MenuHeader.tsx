@@ -23,7 +23,14 @@ interface Category {
   dishCount: number;
   isActive: boolean;
   order?: number;
-  images?: string[]; // ← Array de imágenes Base64
+  images?: string[];
+  hasSpecialOptions?: boolean;
+  specialOptions?: Array<{
+    type: string;
+    label: string;
+    price: number;
+    description?: string;
+  }>;
 }
 
 interface Dish {
@@ -129,28 +136,42 @@ export default function MenuHeader({
     }
   };
 
-  // Función para agregar directamente al carrito
+  // 🔥 FUNCIÓN CORREGIDA - Agregar directamente al carrito con categoryId
   const addToCartDirectly = (dish: Dish) => {
     try {
+      console.log('🛒 Agregando desde MenuHeader:', {
+        dishId: dish.id,
+        dishName: dish.name,
+        categoryId: dish.categoryId,
+        categoryName: dish.categoryName
+      });
+
       const savedCart = localStorage.getItem('cart');
       let cart = savedCart ? JSON.parse(savedCart) : [];
       
       const existingItemIndex = cart.findIndex((item: any) => item.dishId === dish.id);
       
+      const newItem = {
+        dishId: dish.id,
+        dishName: dish.name,
+        price: dish.price,
+        quantity: 1,
+        image: dish.image || '/placeholder.jpg',
+        categoryId: dish.categoryId,        // 👈 AGREGADO
+        categoryName: dish.categoryName,
+        description: dish.description,
+        preparationTime: dish.preparationTime,
+        dishType: dish.dishType || 'normal'
+      };
+
+      console.log('📦 Item a guardar:', newItem);
+      
       if (existingItemIndex !== -1) {
         cart[existingItemIndex].quantity += 1;
+        console.log('🔄 Cantidad actualizada:', cart[existingItemIndex]);
       } else {
-        cart.push({
-          dishId: dish.id,
-          dishName: dish.name,
-          price: dish.price,
-          quantity: 1,
-          image: dish.image || '/placeholder.jpg',
-          categoryName: dish.categoryName,
-          description: dish.description,
-          preparationTime: dish.preparationTime,
-          dishType: dish.dishType || 'normal'
-        });
+        cart.push(newItem);
+        console.log('✅ Nuevo item agregado:', newItem);
       }
       
       localStorage.setItem('cart', JSON.stringify(cart));
@@ -274,6 +295,14 @@ export default function MenuHeader({
                           {currentCategory.description}
                         </p>
                       )}
+                      {/* NUEVO: Mostrar si tiene opciones especiales */}
+                      {currentCategory.hasSpecialOptions && (
+                        <div className="mt-2 flex gap-2">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 rounded-lg text-xs font-semibold">
+                            ✨ Elegir opción disponible
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="text-right">
@@ -285,11 +314,9 @@ export default function MenuHeader({
                 </div>
               </div>
 
-              {/* ✅ SECCIÓN DE  DE LA CATEGORÍA - EN CUADRÍCULA */}
+              {/* SECCIÓN DE IMÁGENES DE LA CATEGORÍA */}
               {categoryImages.length > 0 && (
                 <div className="p-6 border-b border-gray-200">
-                                    
-                  {/* Grid de  responsive: 2 columnas en móvil, 4 en desktop */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                     {categoryImages.map((img: string, index: number) => (
                       <div 
@@ -303,7 +330,6 @@ export default function MenuHeader({
                           className="object-cover group-hover:scale-110 transition-transform duration-300"
                           sizes="(max-width: 768px) 50vw, 25vw"
                         />
-                        {/* Overlay en hover */}
                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
                           <span className="text-white text-sm font-medium bg-black/50 px-2 py-1 rounded-full">
                             {index + 1}/{categoryImages.length}
@@ -312,7 +338,6 @@ export default function MenuHeader({
                       </div>
                     ))}
                   </div>
-                  
                 </div>
               )}
 
@@ -324,6 +349,7 @@ export default function MenuHeader({
                 
                 <DishGrid
                   dishes={currentCategoryDishes}
+                  categories={activeCategories}
                   onOrder={handleOrder}
                   onDelivery={handleDelivery}
                   showAdminActions={showAdminActions}

@@ -20,11 +20,12 @@ import {
 const DISHES_COLLECTION = 'dishes';
 
 export class DishService {
-  // Obtener todos los platos
+  // Obtener todos los platos (ORDENADOS POR 'order')
   async getAllDishes(): Promise<Dish[]> {
     try {
       console.log('🔍 Obteniendo platos de Firebase...');
-      const q = query(collection(db, DISHES_COLLECTION), orderBy('createdAt', 'desc'));
+      // 🔥 CAMBIADO: ordenar por 'order' en lugar de 'createdAt'
+      const q = query(collection(db, DISHES_COLLECTION), orderBy('order', 'asc'));
 
       const querySnapshot = await getDocs(q);
       const dishes: Dish[] = [];
@@ -47,7 +48,8 @@ export class DishService {
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
           orderCount: data.orderCount || 0,
-          dishType: data.dishType || 'normal' // ← NUEVO: valor por defecto 'normal'
+          dishType: data.dishType || 'normal',
+          order: data.order || 0 // 👈 NUEVO: campo order
         } as Dish);
       });
 
@@ -60,7 +62,6 @@ export class DishService {
   }
 
   // Obtener plato por ID
-  // Obtener plato por ID
   async getDishById(id: string): Promise<Dish | null> {
     try {
       const docRef = doc(db, DISHES_COLLECTION, id);
@@ -68,7 +69,7 @@ export class DishService {
 
       if (docSnap.exists()) {
         const data = docSnap.data();
-        console.log('📦 Datos crudos de Firebase:', data); // ← VER ESTO
+        console.log('📦 Datos crudos de Firebase:', data);
 
         return {
           id: docSnap.id,
@@ -86,7 +87,8 @@ export class DishService {
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
           orderCount: data.orderCount || 0,
-          dishType: data.dishType || 'normal' // ← Forzar 'normal' si no existe
+          dishType: data.dishType || 'normal',
+          order: data.order || 0 // 👈 NUEVO: campo order
         } as Dish;
       }
 
@@ -112,7 +114,7 @@ export class DishService {
           collection(db, DISHES_COLLECTION),
           where('categoryId', 'in', categoryIds),
           where('isAvailable', '==', true),
-          orderBy('createdAt', 'desc')
+          orderBy('order', 'asc') // 🔥 CAMBIADO: ordenar por 'order'
         );
 
         const querySnapshot = await getDocs(q);
@@ -136,14 +138,15 @@ export class DishService {
             createdAt: data.createdAt?.toDate() || new Date(),
             updatedAt: data.updatedAt?.toDate(),
             orderCount: data.orderCount || 0,
-            dishType: data.dishType || 'normal'
+            dishType: data.dishType || 'normal',
+            order: data.order || 0
           } as Dish);
         });
 
         console.log(`✅ ${dishes.length} platos encontrados en ${categoryIds.length} categorías`);
         return dishes;
       } else {
-        console.log('📦 Más de 10 categorías, dividiendo en lotes...');
+        // ... código para lotes (similar pero con orderBy)
         const batches: string[][] = [];
         for (let i = 0; i < categoryIds.length; i += 10) {
           batches.push(categoryIds.slice(i, i + 10));
@@ -156,7 +159,7 @@ export class DishService {
             collection(db, DISHES_COLLECTION),
             where('categoryId', 'in', batch),
             where('isAvailable', '==', true),
-            orderBy('createdAt', 'desc')
+            orderBy('order', 'asc') // 🔥 CAMBIADO
           );
 
           const querySnapshot = await getDocs(q);
@@ -178,14 +181,13 @@ export class DishService {
               createdAt: data.createdAt?.toDate() || new Date(),
               updatedAt: data.updatedAt?.toDate(),
               orderCount: data.orderCount || 0,
-              dishType: data.dishType || 'normal'
+              dishType: data.dishType || 'normal',
+              order: data.order || 0
             } as Dish);
           });
         }
 
         const uniqueDishes = Array.from(new Map(allDishes.map(dish => [dish.id, dish])).values());
-
-        console.log(`✅ ${uniqueDishes.length} platos encontrados en ${categoryIds.length} categorías (${batches.length} lotes)`);
         return uniqueDishes;
       }
     } catch (error: any) {
@@ -194,14 +196,20 @@ export class DishService {
     }
   }
 
-  // Agregar nuevo plato
-  async addDish(dishData: Omit<Dish, 'id' | 'createdAt' | 'updatedAt'>): Promise<Dish | null> {
+  // Agregar nuevo plato (CON ORDEN AUTOMÁTICO)
+  async addDish(dishData: Omit<Dish, 'id' | 'createdAt' | 'updatedAt' | 'order'>): Promise<Dish | null> {
     try {
       console.log('➕ Intentando agregar plato:', dishData);
 
       if (!dishData.name || !dishData.categoryId) {
         throw new Error('Faltan datos requeridos: nombre y categoría');
       }
+
+      // 🔥 Obtener el máximo orden actual para esta categoría
+      const dishesInCategory = await this.getDishesByCategory(dishData.categoryId);
+      const maxOrder = dishesInCategory.length > 0
+        ? Math.max(...dishesInCategory.map(d => d.order || 0))
+        : 0;
 
       const dishToSave = {
         name: dishData.name.trim(),
@@ -216,7 +224,8 @@ export class DishService {
         preparationTime: dishData.preparationTime || 15,
         ingredients: dishData.ingredients || [],
         orderCount: 0,
-        dishType: dishData.dishType || 'normal', // ← NUEVO: guardar tipo de plato
+        dishType: dishData.dishType || 'normal',
+        order: maxOrder + 1, // 👈 NUEVO: asignar el siguiente orden
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
@@ -230,6 +239,7 @@ export class DishService {
       return {
         id: docRef.id,
         ...dishData,
+        order: maxOrder + 1,
         orderCount: 0,
         createdAt: new Date(),
         updatedAt: new Date(),
@@ -240,17 +250,52 @@ export class DishService {
     }
   }
 
-  // Actualizar plato
+  // 🔥 NUEVO: Reordenar platos de una categoría
+  async reorderDishes(categoryId: string, dishIds: string[]): Promise<boolean> {
+    try {
+      console.log('🔄 Reordenando platos de categoría:', categoryId);
+      
+      // Actualizar cada plato con su nuevo orden
+      for (let i = 0; i < dishIds.length; i++) {
+        const dishId = dishIds[i];
+        await this.updateDish(dishId, { order: i + 1 });
+      }
+      
+      console.log('✅ Platos reordenados correctamente');
+      return true;
+    } catch (error: any) {
+      console.error('❌ Error al reordenar platos:', error.message);
+      return false;
+    }
+  }
+
+  // Actualizar plato (AHORA INCLUYE 'order')
   async updateDish(id: string, updates: Partial<Dish>): Promise<boolean> {
     try {
       const docRef = doc(db, DISHES_COLLECTION, id);
 
-      await updateDoc(docRef, {
-        ...updates,
-        updatedAt: serverTimestamp(),
+      console.log('📤 ACTUALIZANDO PLATO:', {
+        id,
+        updates,
+        hasOrder: 'order' in updates,
+        orderValue: updates.order
       });
 
-      console.log('✅ Plato actualizado:', id);
+      // Preparar datos para Firestore
+      const dataToUpdate: any = {
+        ...updates,
+        updatedAt: serverTimestamp(),
+      };
+
+      // Asegurar que order sea número si viene
+      if (dataToUpdate.order !== undefined) {
+        dataToUpdate.order = Number(dataToUpdate.order);
+        console.log('🎯 ORDER A GUARDAR:', dataToUpdate.order);
+      }
+
+      await updateDoc(docRef, dataToUpdate);
+
+      console.log('✅ Plato actualizado en Firebase:', id);
       return true;
     } catch (error: any) {
       console.error('❌ Error al actualizar plato:', error.message);
@@ -318,7 +363,7 @@ export class DishService {
         collection(db, DISHES_COLLECTION),
         where('categoryId', '==', categoryId),
         where('isAvailable', '==', true),
-        orderBy('createdAt', 'desc')
+        orderBy('order', 'asc') // 🔥 CAMBIADO: ordenar por 'order'
       );
 
       const querySnapshot = await getDocs(q);
@@ -342,7 +387,8 @@ export class DishService {
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
           orderCount: data.orderCount || 0,
-          dishType: data.dishType || 'normal'
+          dishType: data.dishType || 'normal',
+          order: data.order || 0
         } as Dish);
       });
 
@@ -368,9 +414,12 @@ export class DishService {
         conditions.push(where('categoryId', '==', options.categoryId));
       }
 
-      if (conditions.length > 0) {
-        q = query(collection(db, DISHES_COLLECTION), ...conditions);
-      }
+      // 🔥 Añadir orden por 'order' por defecto
+      q = query(
+        collection(db, DISHES_COLLECTION),
+        ...conditions,
+        orderBy('order', 'asc')
+      );
 
       const querySnapshot = await getDocs(q);
       const dishes: Dish[] = [];
@@ -393,7 +442,8 @@ export class DishService {
           createdAt: data.createdAt?.toDate() || new Date(),
           updatedAt: data.updatedAt?.toDate(),
           orderCount: data.orderCount || 0,
-          dishType: data.dishType || 'normal'
+          dishType: data.dishType || 'normal',
+          order: data.order || 0
         };
 
         let include = true;
@@ -458,8 +508,7 @@ export class DishService {
         .sort((a, b) => {
           const popularityDiff = (b.orderCount || 0) - (a.orderCount || 0);
           if (popularityDiff !== 0) return popularityDiff;
-
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+          return (a.order || 0) - (b.order || 0);
         })
         .slice(0, limit);
 
