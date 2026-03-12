@@ -25,13 +25,52 @@ export class OrderService {
       // Calcular total
       const total = orderData.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
       
+      // 🔥 LIMPIAR undefined DEL OBJETO ANTES DE GUARDAR
+      const cleanOrderData: any = {};
+      
+      // Copiar solo propiedades que no sean undefined
+      Object.keys(orderData).forEach(key => {
+        const value = (orderData as any)[key];
+        if (value !== undefined) {
+          cleanOrderData[key] = value;
+        }
+      });
+
+      // Limpiar items también (por si acaso)
+      if (cleanOrderData.items) {
+        cleanOrderData.items = cleanOrderData.items.map((item: any) => {
+          const cleanItem: any = {};
+          Object.keys(item).forEach(key => {
+            const value = item[key];
+            if (value !== undefined) {
+              cleanItem[key] = value;
+            }
+          });
+          return cleanItem;
+        });
+      }
+
+      // Limpiar surcharges si existe
+      if (cleanOrderData.surcharges) {
+        const cleanSurcharges: any = {};
+        Object.keys(cleanOrderData.surcharges).forEach(key => {
+          const value = cleanOrderData.surcharges[key];
+          if (value !== undefined) {
+            cleanSurcharges[key] = value;
+          }
+        });
+        cleanOrderData.surcharges = cleanSurcharges;
+      }
+      
       const orderToSave = {
-        ...orderData,
+        ...cleanOrderData,
         total,
         status: 'pending' as const,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       };
+      
+      console.log('📦 OrderToSave limpio:', JSON.stringify(orderToSave, null, 2));
       
       const docRef = await addDoc(collection(db, ORDERS_COLLECTION), orderToSave);
       
@@ -54,13 +93,10 @@ export class OrderService {
     }
   }
 
-  // Obtener órdenes por usuario (TODO LOCALMENTE, sin índice compuesto)
+  // ... resto de métodos igual
   async getOrdersByUser(userId: string): Promise<Order[]> {
     try {
-      // Obtener todas las órdenes
       const allOrders = await this.getAllOrders();
-      
-      // Filtrar localmente por usuario
       return allOrders.filter(order => order.userId === userId);
     } catch (error) {
       console.error('Error al obtener órdenes:', error);
@@ -68,7 +104,6 @@ export class OrderService {
     }
   }
 
-  // Obtener todas las órdenes (admin)
   async getAllOrders(): Promise<Order[]> {
     try {
       const q = query(collection(db, ORDERS_COLLECTION));
@@ -86,7 +121,6 @@ export class OrderService {
         } as Order);
       });
       
-      // Ordenar localmente por fecha descendente
       return orders.sort((a, b) => 
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
@@ -96,7 +130,6 @@ export class OrderService {
     }
   }
 
-  // Obtener orden por ID
   async getOrderById(orderId: string): Promise<Order | null> {
     try {
       const docRef = doc(db, ORDERS_COLLECTION, orderId);
@@ -119,7 +152,6 @@ export class OrderService {
     }
   }
 
-  // Actualizar estado de orden
   async updateOrderStatus(orderId: string, status: Order['status']): Promise<boolean> {
     try {
       const docRef = doc(db, ORDERS_COLLECTION, orderId);
@@ -135,7 +167,6 @@ export class OrderService {
     }
   }
 
-  // Obtener estadísticas (TODO LOCALMENTE)
   async getOrderStats() {
     try {
       const orders = await this.getAllOrders();
@@ -167,7 +198,6 @@ export class OrderService {
     }
   }
 
-  // Obtener órdenes por estado (TODO LOCALMENTE)
   async getOrdersByStatus(status: Order['status']): Promise<Order[]> {
     try {
       const allOrders = await this.getAllOrders();

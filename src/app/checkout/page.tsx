@@ -256,42 +256,109 @@ export default function CheckoutPage() {
         }
 
         return {
-          dishId: item.dishId,
-          dishName: item.dishName,
-          quantity: item.quantity,
-          price: item.price,
-          basePrice: item.basePrice || item.price,
+          dishId: item.dishId || '',
+          dishName: item.dishName || '',
+          quantity: item.quantity || 0,
+          price: item.price || 0,
+          basePrice: item.basePrice || item.price || 0,
           dishType: item.dishType || 'normal',
-          surcharge: surcharge,
-          selectedSpecialOption: item.selectedSpecialOption,
-          categoryId: item.categoryId
+          surcharge: surcharge || 0,
+          selectedSpecialOption: item.selectedSpecialOption || null,
+          categoryId: item.categoryId || ''
         };
       });
 
-      const orderData = {
-        userId: user.uid,
+      // 🔥 CONSTRUIR orderData con valores por defecto para TODO
+      const orderData: any = {
+        userId: user.uid || '',
         userName: user.displayName || 'Cliente',
         userEmail: user.email || '',
         items: orderItems,
-        subtotal: totals.subtotal,
+        subtotal: totals.subtotal || 0,
         surcharges: {
-          sopa: totals.sopaSurcharge,
-          menu: totals.menuSurcharge,
-          special: totals.specialOptionsTotal,
-          total: totals.totalSurcharge
+          sopa: totals.sopaSurcharge || 0,
+          menu: totals.menuSurcharge || 0,
+          special: totals.specialOptionsTotal || 0,
+          total: totals.totalSurcharge || 0
         },
-        total: totals.total,
-        status: 'pending' as const,
-        type: orderType,
-        ...(orderType === 'delivery' && { deliveryAddress: deliveryAddress.trim() }),
-        ...(notes.trim() && { notes: notes.trim() }),
-        createdAt: new Date()
+        total: totals.total || 0,
+        status: 'pending',
+        type: orderType || 'pickup',
       };
 
+      // 🔥 AGREGAR CAMPOS OPCIONALES SOLO SI EXISTEN Y NO ESTÁN VACÍOS
+      if (deliveryAddress && deliveryAddress.trim()) {
+        orderData.deliveryAddress = deliveryAddress.trim();
+      }
+
+      if (notes && notes.trim()) {
+        orderData.notes = notes.trim();
+      }
+
+      // 🔥 CONSTRUIR MENSAJE DE WHATSAPP
+      const itemsText = orderItems
+        .map(item => {
+          let itemLine = `  • ${item.dishName} x${item.quantity} = S/ ${(item.price * item.quantity).toFixed(2)}`;
+          if (item.surcharge > 0) {
+            itemLine += ` (+S/ ${item.surcharge.toFixed(2)} por ${item.dishType})`;
+          }
+          if (item.selectedSpecialOption) {
+            itemLine += `\n    └─ ✨ ${item.selectedSpecialOption.label}: +S/ ${(item.selectedSpecialOption.price * item.quantity).toFixed(2)}`;
+          }
+          return itemLine;
+        })
+        .join('\n');
+
+      const deliveryText = orderType === 'delivery'
+        ? `🚚 *Delivery a:* ${deliveryAddress.trim()}\n   (El costo de envío se paga al llegar)`
+        : `🏪 *Recojo en tienda*`;
+
+      const surchargeText = totals.totalSurcharge > 0
+        ? `💰 *Cargos adicionales:* S/ ${totals.totalSurcharge.toFixed(2)}\n   (Sopas: S/ ${totals.sopaSurcharge.toFixed(2)} | Menús: S/ ${totals.menuSurcharge.toFixed(2)})`
+        : '';
+
+      const specialText = totals.specialOptionsTotal > 0
+        ? `✨ *Opciones especiales:* S/ ${totals.specialOptionsTotal.toFixed(2)}`
+        : '';
+
+      const notesText = notes.trim() ? `\n📝 *Notas:* ${notes.trim()}` : '';
+
+      // Crear el mensaje base (sin ID)
+      const mensajeBase = [
+        `🍜 *NUEVO PEDIDO - Chifa Los Angeles*`,
+        `─────────────────────`,
+        `👤 *Cliente:* ${user.displayName || 'Cliente'}`,
+        `📧 *Email:* ${user.email}`,
+        `─────────────────────`,
+        `🛒 *Pedido:*`,
+        itemsText,
+        `─────────────────────`,
+        deliveryText,
+        specialText ? `─────────────────────\n${specialText}` : '',
+        surchargeText ? `─────────────────────\n${surchargeText}` : '',
+        `─────────────────────`,
+        `💰 *Subtotal:* S/ ${totals.subtotal.toFixed(2)}`,
+        `✅ *TOTAL: S/ ${totals.total.toFixed(2)}*`,
+        notesText,
+      ].filter(Boolean).join('\n');
+
+      // Abrir WhatsApp INMEDIATAMENTE (acción del usuario)
+      const whatsappUrlBase = `https://wa.me/51976039735?text=${encodeURIComponent(mensajeBase)}`;
+      const whatsappWindow = window.open(whatsappUrlBase, '_blank');
+
+      // Crear el pedido
       const newOrder = await orderService.createOrder(orderData);
 
       if (newOrder) {
         setOrderId(newOrder.id);
+        
+        // Actualizar la ventana de WhatsApp con el ID (si aún está abierta)
+        if (whatsappWindow && !whatsappWindow.closed) {
+          const mensajeCompleto = mensajeBase + `\n─────────────────────\n🆔 *ID Pedido:* ${newOrder.id}`;
+          const nuevaUrl = `https://wa.me/51976039735?text=${encodeURIComponent(mensajeCompleto)}`;
+          whatsappWindow.location.href = nuevaUrl;
+        }
+        
         setShowSuccess(true);
         setCartItems([]);
         localStorage.removeItem('cart');
@@ -353,6 +420,7 @@ export default function CheckoutPage() {
             </div>
             <h1 className="text-3xl font-bold text-gray-900 mb-4">¡Pedido Confirmado!</h1>
             <p className="text-gray-600 text-lg mb-2">Tu pedido ha sido recibido exitosamente.</p>
+            <p className="text-gray-500 mb-4">Hemos enviado los detalles a WhatsApp</p>
             <div className="inline-block px-4 py-2 bg-green-100 text-green-800 rounded-lg font-mono text-sm mb-6">
               ID: {orderId}
             </div>
@@ -505,7 +573,9 @@ export default function CheckoutPage() {
                                 <span className="text-sm font-medium text-gray-700">
                                   ¿Con qué deseas tu pedido?
                                 </span>
-                                
+                                <span className="text-xs px-2 py-0.5 bg-red-100 text-red-800 rounded-full font-semibold">
+                                  Obligatorio
+                                </span>
                               </div>
 
                               <div className="space-y-3">
