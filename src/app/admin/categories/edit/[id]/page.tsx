@@ -1,307 +1,192 @@
-// lib/firebase/categoryService.ts
+// src/app/admin/categories/edit/[id]/page.tsx
 'use client';
 
-import { Category, SpecialOptionConfig } from '@/types/menu.types';
-import { db } from '@/lib/firebase/config';
-import { 
-  collection, 
-  doc, 
-  getDocs, 
-  getDoc, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query,
-  serverTimestamp,
-  writeBatch
-} from 'firebase/firestore';
+import { useState, useEffect } from 'react';
+import { useRouter, useParams } from 'next/navigation';
+import ProtectedAdmin from '@/components/shared/ProtectedAdmin';
+import CategoryForm from '@/components/admin/CategoryForm';
+import { categoryService } from '@/lib/firebase/categoryService';
+import { ArrowLeft, AlertCircle, CheckCircle, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { Category } from '@/types/menu.types';
 
-const CATEGORIES_COLLECTION = 'categories';
+export default function EditCategoryPage() {
+  const router = useRouter();
+  const params = useParams();
+  const categoryId = params.id as string;
+  
+  const [category, setCategory] = useState<Category | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
-export class CategoryService {
-  // Obtener todas las categorías
-  async getAllCategories(): Promise<Category[]> {
-    try {
-      console.log('📦 Obteniendo categorías desde Firebase...');
-      const q = query(collection(db, CATEGORIES_COLLECTION));
+  useEffect(() => {
+    const loadCategory = async () => {
+      setIsLoading(true);
+      setError(null);
       
-      const querySnapshot = await getDocs(q);
-      const categories: Category[] = [];
-      
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        console.log(`📁 Categoría encontrada: ${doc.id}`, {
-          name: data.name,
-          imagesCount: data.images?.length || 0,
-          specialOptionsCount: data.specialOptions?.length || 0,
-          hasSpecialOptions: !!data.specialOptions
-        });
+      try {
+        console.log('🔍 Cargando categoría ID:', categoryId);
+        const foundCategory = await categoryService.getCategoryById(categoryId);
         
-        categories.push({
-          id: doc.id,
-          name: data.name || '',
-          description: data.description || '',
-          isActive: data.isActive ?? true,
-          dishCount: data.dishCount || 0,
-          icon: data.icon || '🍽️',
-          color: data.color || '#DC2626',
-          order: data.order || 0,
-          images: data.images || [],
-          specialOptions: data.specialOptions || [],
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate(),
-        });
-      });
-      
-      return categories.sort((a, b) => (a.order || 0) - (b.order || 0));
-    } catch (error) {
-      console.error('❌ Error al obtener categorías:', error);
-      return [];
-    }
-  }
-
-  // Obtener categorías activas
-  async getActiveCategories(): Promise<Category[]> {
-    try {
-      const allCategories = await this.getAllCategories();
-      return allCategories
-        .filter(category => category.isActive)
-        .sort((a, b) => (a.order || 0) - (b.order || 0));
-    } catch (error) {
-      console.error('❌ Error al obtener categorías activas:', error);
-      return [];
-    }
-  }
-
-  // Obtener categoría por ID
-  async getCategoryById(id: string): Promise<Category | null> {
-    try {
-      const docRef = doc(db, CATEGORIES_COLLECTION, id);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        console.log(`📁 Categoría por ID ${id}:`, {
-          name: data.name,
-          imagesCount: data.images?.length || 0,
-          specialOptionsCount: data.specialOptions?.length || 0
-        });
-        
-        return {
-          id: docSnap.id,
-          name: data.name || '',
-          description: data.description || '',
-          isActive: data.isActive ?? true,
-          dishCount: data.dishCount || 0,
-          icon: data.icon || '🍽️',
-          color: data.color || '#DC2626',
-          order: data.order || 0,
-          images: data.images || [],
-          specialOptions: data.specialOptions || [],
-          createdAt: data.createdAt?.toDate() || new Date(),
-          updatedAt: data.updatedAt?.toDate(),
-        };
+        if (foundCategory) {
+          setCategory(foundCategory);
+        } else {
+          setError('Categoría no encontrada');
+        }
+      } catch (error: any) {
+        console.error('❌ Error al cargar categoría:', error);
+        setError(`Error al cargar la categoría: ${error.message}`);
+      } finally {
+        setIsLoading(false);
       }
-      
-      return null;
-    } catch (error) {
-      console.error('❌ Error al obtener categoría:', error);
-      return null;
-    }
-  }
+    };
 
-  // Agregar nueva categoría
-  async addCategory(categoryData: Omit<Category, 'id' | 'dishCount' | 'createdAt' | 'updatedAt'>): Promise<Category | null> {
+    if (categoryId) {
+      loadCategory();
+    }
+  }, [categoryId]);
+
+  const handleSubmit = async (categoryData: Omit<Category, 'id' | 'createdAt' | 'updatedAt' | 'dishCount'>) => {
+    setIsSaving(true);
+    setError(null);
+    setSuccess(false);
+    
     try {
-      console.log('➕ Intentando agregar categoría:', {
-        name: categoryData.name,
-        imagesCount: categoryData.images?.length || 0,
-        specialOptionsCount: categoryData.specialOptions?.length || 0
-      });
-      
-      const categories = await this.getAllCategories();
-      const maxOrder = categories.length > 0 
-        ? Math.max(...categories.map(c => c.order || 0)) 
-        : 0;
-      
-      const categoryToSave = {
-        name: categoryData.name,
+      const dataToSend = {
+        name: categoryData.name.trim(),
         description: categoryData.description || '',
-        isActive: categoryData.isActive ?? true,
-        dishCount: 0,
+        isActive: categoryData.isActive,
         icon: categoryData.icon || '🍽️',
-        color: categoryData.color || '#DC2626',
-        order: maxOrder + 1,
+        color: categoryData.color || '#EC1F25',
+        order: categoryData.order || 1,
         images: categoryData.images || [],
-        specialOptions: categoryData.specialOptions || [],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
+        specialOptions: categoryData.specialOptions || []
       };
       
-      console.log('📤 Datos a guardar:', {
-        name: categoryToSave.name,
-        imagesCount: categoryToSave.images.length,
-        specialOptionsCount: categoryToSave.specialOptions.length,
-        specialOptions: categoryToSave.specialOptions
-      });
+      const success = await categoryService.updateCategory(categoryId, dataToSend);
       
-      const docRef = await addDoc(collection(db, CATEGORIES_COLLECTION), categoryToSave);
+      if (success) {
+        setSuccess(true);
+        setTimeout(() => {
+          router.push('/admin/categories');
+          router.refresh();
+        }, 2000);
+      } else {
+        setError('Error al actualizar la categoría');
+      }
       
-      console.log('✅ Categoría creada con ID:', docRef.id);
-      
-      return {
-        id: docRef.id,
-        ...categoryData,
-        dishCount: 0,
-        order: maxOrder + 1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
     } catch (error: any) {
-      console.error('❌ Error al agregar categoría:', error);
-      return null;
+      console.error('❌ Error:', error);
+      setError(error.message || 'Error al actualizar la categoría');
+    } finally {
+      setIsSaving(false);
     }
+  };
+
+  const handleCancel = () => {
+    router.push('/admin/categories');
+  };
+
+  if (isLoading) {
+    return (
+      <ProtectedAdmin>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <Loader2 className="w-16 h-16 text-[#EC1F25] animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Cargando información de la categoría...</p>
+          </div>
+        </div>
+      </ProtectedAdmin>
+    );
   }
 
-  // 🔥🔥🔥 VERSIÓN CORREGIDA DE updateCategory 🔥🔥🔥
-  async updateCategory(id: string, updates: Partial<Category>): Promise<boolean> {
-    try {
-      const docRef = doc(db, CATEGORIES_COLLECTION, id);
-      
-      // Preparar datos para Firestore - incluir TODOS los campos
-      const firestoreData: any = {
-        name: updates.name,
-        description: updates.description,
-        isActive: updates.isActive,
-        icon: updates.icon,
-        color: updates.color,
-        order: updates.order,
-        images: updates.images,
-        updatedAt: serverTimestamp(),
-      };
-
-      // 🔥🔥🔥 AGREGAR SPECIALOPTIONS EXPLÍCITAMENTE 🔥🔥🔥
-      if (updates.specialOptions !== undefined) {
-        firestoreData.specialOptions = updates.specialOptions;
-        console.log('🎯 AGREGANDO specialOptions A FIRESTORE:', updates.specialOptions);
-      }
-
-      console.log(`✏️ Actualizando categoría ${id}:`, {
-        updates: Object.keys(updates),
-        hasImages: 'images' in updates,
-        imagesCount: updates.images?.length || 0,
-        hasSpecialOptions: updates.specialOptions !== undefined,
-        specialOptionsCount: updates.specialOptions?.length || 0,
-        specialOptions: updates.specialOptions,
-        firestoreDataKeys: Object.keys(firestoreData)
-      });
-      
-      await updateDoc(docRef, firestoreData);
-      
-      console.log('✅ Categoría actualizada');
-      return true;
-    } catch (error) {
-      console.error('❌ Error al actualizar categoría:', error);
-      return false;
-    }
+  if (error && !category) {
+    return (
+      <ProtectedAdmin>
+        <div className="min-h-screen bg-gray-50 py-8">
+          <div className="max-w-4xl mx-auto px-4">
+            <div className="mb-6">
+              <Link
+                href="/admin/categories"
+                className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 px-4 py-2 rounded-lg hover:bg-gray-100"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Volver a categorías
+              </Link>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow p-8 text-center">
+              <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+                <AlertCircle className="w-8 h-8 text-red-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">Error</h1>
+              <p className="text-gray-600 mb-4">{error}</p>
+              <Link
+                href="/admin/categories"
+                className="px-6 py-3 bg-[#EC1F25] text-white font-semibold rounded-lg hover:bg-red-700"
+              >
+                Volver a Categorías
+              </Link>
+            </div>
+          </div>
+        </div>
+      </ProtectedAdmin>
+    );
   }
 
-  // Eliminar categoría
-  async deleteCategory(id: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const { dishService } = await import('@/lib/firebase/dishService');
-      const dishes = await dishService.getAllDishes();
-      const dishesInCategory = dishes.filter(dish => dish.categoryId === id);
-      
-      if (dishesInCategory.length > 0) {
-        return { 
-          success: false, 
-          message: `No se puede eliminar la categoría. Tiene ${dishesInCategory.length} plato(s) asociado(s).` 
-        };
-      }
-      
-      const docRef = doc(db, CATEGORIES_COLLECTION, id);
-      await deleteDoc(docRef);
-      
-      await this.reorderAfterDelete();
-      
-      return { success: true, message: 'Categoría eliminada exitosamente' };
-    } catch (error) {
-      console.error('❌ Error al eliminar categoría:', error);
-      return { success: false, message: 'Error al eliminar la categoría' };
-    }
-  }
+  return (
+    <ProtectedAdmin>
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 py-8">
+        <div className="max-w-4xl mx-auto px-4">
+          <div className="mb-8">
+            <div className="flex items-center gap-4 mb-6">
+              <Link
+                href="/admin/categories"
+                className="p-2 hover:bg-gray-100 rounded-lg"
+              >
+                <ArrowLeft className="w-6 h-6 text-gray-600" />
+              </Link>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Editar Categoría</h1>
+                <p className="text-gray-600">Modifica la información de la categoría</p>
+              </div>
+            </div>
+          </div>
 
-  // Cambiar estado activo/inactivo
-  async toggleCategoryStatus(id: string): Promise<boolean> {
-    try {
-      const category = await this.getCategoryById(id);
-      if (!category) return false;
-      
-      return await this.updateCategory(id, { isActive: !category.isActive });
-    } catch (error) {
-      console.error('❌ Error al cambiar estado de categoría:', error);
-      return false;
-    }
-  }
+          {success && (
+            <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+                <div>
+                  <h3 className="font-semibold text-green-800">¡Categoría actualizada exitosamente!</h3>
+                  <p className="text-green-700">Redirigiendo...</p>
+                </div>
+              </div>
+            </div>
+          )}
 
-  // Reordenar categorías
-  async reorderCategories(orderedIds: string[]): Promise<boolean> {
-    try {
-      const batch = writeBatch(db);
-      
-      orderedIds.forEach((categoryId, index) => {
-        const docRef = doc(db, CATEGORIES_COLLECTION, categoryId);
-        batch.update(docRef, {
-          order: index + 1,
-          updatedAt: serverTimestamp(),
-        });
-      });
-      
-      await batch.commit();
-      console.log('✅ Categorías reordenadas');
-      return true;
-    } catch (error) {
-      console.error('❌ Error al reordenar categorías:', error);
-      return false;
-    }
-  }
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600" />
+                <p className="text-red-800">{error}</p>
+              </div>
+            </div>
+          )}
 
-  // Reordenar después de eliminar
-  private async reorderAfterDelete(): Promise<void> {
-    try {
-      const categories = await this.getAllCategories();
-      const sortedCategories = categories.sort((a, b) => (a.order || 0) - (b.order || 0));
-      
-      const batch = writeBatch(db);
-      
-      sortedCategories.forEach((category, index) => {
-        const docRef = doc(db, CATEGORIES_COLLECTION, category.id);
-        batch.update(docRef, {
-          order: index + 1,
-          updatedAt: serverTimestamp(),
-        });
-      });
-      
-      await batch.commit();
-      console.log('✅ Categorías reordenadas después de eliminar');
-    } catch (error) {
-      console.error('❌ Error al reordenar después de eliminar:', error);
-    }
-  }
-
-  // Actualizar contador de platos para una categoría
-  async updateCategoryDishCount(categoryId: string, change: number): Promise<void> {
-    try {
-      const category = await this.getCategoryById(categoryId);
-      if (category) {
-        const newCount = (category.dishCount || 0) + change;
-        await this.updateCategory(categoryId, { dishCount: Math.max(0, newCount) });
-      }
-    } catch (error) {
-      console.error('❌ Error al actualizar contador de categoría:', error);
-    }
-  }
+          {category && (
+            <CategoryForm
+              category={category}
+              onSubmit={handleSubmit}
+              onCancel={handleCancel}
+              isLoading={isSaving}
+              isEditing={true}
+            />
+          )}
+        </div>
+      </div>
+    </ProtectedAdmin>
+  );
 }
-
-export const categoryService = new CategoryService();
