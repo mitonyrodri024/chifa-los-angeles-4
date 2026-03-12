@@ -8,7 +8,7 @@ import { orderService } from '@/lib/firebase/orderService';
 import { categoryService } from '@/lib/firebase/categoryService';
 import {
   ArrowLeft, ShoppingCart, Truck, Store, Plus, Minus,
-  Trash2, Loader2, CheckCircle, AlertCircle, Soup, Menu, ChevronDown
+  Trash2, Loader2, CheckCircle, AlertCircle
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -60,7 +60,7 @@ export default function CheckoutPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showEmptyCartMessage, setShowEmptyCartMessage] = useState(false);
-  const [expandedOptions, setExpandedOptions] = useState<Record<string, boolean>>({});
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
 
   // Cargar categorías
   useEffect(() => {
@@ -122,9 +122,18 @@ export default function CheckoutPage() {
   const handleSpecialOptionChange = (uniqueId: string, option: any) => {
     const updatedCart = cartItems.map(item => {
       if ((item.uniqueId || item.dishId) === uniqueId) {
-        const basePrice = item.basePrice || item.price;
+        let basePrice = item.basePrice;
+
+        if (!basePrice) {
+          if (item.selectedSpecialOption) {
+            basePrice = item.price - item.selectedSpecialOption.price;
+          } else {
+            basePrice = item.price;
+          }
+        }
+
         const newPrice = basePrice + option.price;
-        
+
         return {
           ...item,
           selectedSpecialOption: option,
@@ -135,12 +144,9 @@ export default function CheckoutPage() {
       }
       return item;
     });
+
     setCartItems(updatedCart);
     localStorage.setItem('cart', JSON.stringify(updatedCart));
-  };
-
-  const toggleOptions = (uniqueId: string) => {
-    setExpandedOptions(prev => ({ ...prev, [uniqueId]: !prev[uniqueId] }));
   };
 
   const updateQuantity = (uniqueId: string, newQuantity: number) => {
@@ -228,13 +234,22 @@ export default function CheckoutPage() {
       return;
     }
 
+    const itemsWithoutOption = cartItems.filter(item =>
+      hasSpecialOptions(item) && !item.selectedSpecialOption
+    );
+
+    if (itemsWithoutOption.length > 0) {
+      setError('Debes seleccionar una opción para todos los platos');
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
       const orderItems = cartItems.map(item => {
         let surcharge = 0;
-        
+
         if (orderType === 'delivery' && !hasSpecialOptions(item)) {
           if (item.dishType === 'sopa') surcharge = 0.5 * item.quantity;
           if (item.dishType === 'menu') surcharge = 1.0 * item.quantity;
@@ -281,8 +296,6 @@ export default function CheckoutPage() {
         setCartItems([]);
         localStorage.removeItem('cart');
         window.dispatchEvent(new Event('cartUpdated'));
-
-        // 🔥 Ya no redirige automáticamente
       } else {
         setError('Error al crear el pedido. Intenta nuevamente.');
       }
@@ -368,8 +381,7 @@ export default function CheckoutPage() {
                 </div>
               </div>
             </div>
-            
-            {/* 🔥 BOTONES PARA IR AL MENÚ */}
+
             <div className="flex justify-center gap-4">
               <Link
                 href="/menu"
@@ -423,9 +435,7 @@ export default function CheckoutPage() {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Resto del código del carrito igual */}
           <div className="lg:col-span-2">
-            {/* ... contenido del carrito ... */}
             <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
               <div className="p-6 border-b border-gray-200">
                 <div className="flex items-center justify-between">
@@ -450,7 +460,6 @@ export default function CheckoutPage() {
                   const uniqueId = item.uniqueId || item.dishId;
                   const hasOptions = hasSpecialOptions(item);
                   const specialOptions = hasOptions ? getSpecialOptions(item) : [];
-                  const isExpanded = expandedOptions[uniqueId];
 
                   return (
                     <div key={uniqueId} className="p-6">
@@ -459,15 +468,12 @@ export default function CheckoutPage() {
                           <div className="flex justify-between">
                             <div>
                               <h3 className="font-bold text-gray-900">{item.dishName}</h3>
-                              
-                              {item.selectedSpecialOption && (
-                                <div className="mt-1 inline-block px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                                  ✨ {item.selectedSpecialOption.label}: +S/ {item.selectedSpecialOption.price.toFixed(2)}
-                                </div>
-                              )}
-                              
-                              <p className="text-chifa-red font-bold text-lg">S/ {item.price.toFixed(2)}</p>
-                              
+
+                              {/* 🔥 PRECIO BASE - NUNCA CAMBIA */}
+                              <p className="text-chifa-red font-bold text-lg">
+                                S/ {(item.basePrice || item.price).toFixed(2)}
+                              </p>
+
                               {!hasOptions && item.dishType && item.dishType !== 'normal' && (
                                 <span className={`inline-block mt-1 text-xs px-2 py-0.5 rounded-full ${
                                   item.dishType === 'sopa'
@@ -478,11 +484,12 @@ export default function CheckoutPage() {
                                 </span>
                               )}
                             </div>
-                            
+
                             <div className="text-right">
+                              {/* 🔥 PRECIO TOTAL DEL ITEM (base + opción + recargos) */}
                               <div className="font-bold text-gray-900">S/ {itemTotal.toFixed(2)}</div>
                               <div className="text-sm text-gray-500">{item.quantity} {item.quantity === 1 ? 'unidad' : 'unidades'}</div>
-                              
+
                               {itemSurcharge > 0 && orderType === 'delivery' && (
                                 <div className="text-xs text-orange-600 mt-1">
                                   +S/ {itemSurcharge.toFixed(2)} por {item.dishType}
@@ -491,59 +498,76 @@ export default function CheckoutPage() {
                             </div>
                           </div>
 
+                          {/* SECCIÓN DE OPCIONES OBLIGATORIAS */}
                           {hasOptions && (
                             <div className="mt-4 border-t pt-4">
-                              <div className="flex items-center justify-between mb-2">
-                                <span className="text-sm font-medium text-gray-700">Opciones disponibles:</span>
-                                <button
-                                  onClick={() => toggleOptions(uniqueId)}
-                                  className="flex items-center gap-1 text-sm text-[#EC1F25] font-medium hover:underline"
-                                >
-                                  {isExpanded ? 'Ocultar' : 'Mostrar opciones'}
-                                  <ChevronDown className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                                </button>
+                              <div className="flex items-center gap-2 mb-4">
+                                <span className="text-sm font-medium text-gray-700">
+                                  ¿Con qué deseas tu pedido?
+                                </span>
+                                <span className="text-xs px-2 py-0.5 bg-red-100 text-red-800 rounded-full font-semibold">
+                                  Obligatorio
+                                </span>
                               </div>
 
-                              {item.selectedSpecialOption && (
-                                <div className="mb-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                                  <div className="flex justify-between items-center">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-green-600">✓</span>
-                                      <span className="font-medium text-gray-900">{item.selectedSpecialOption.label}</span>
-                                    </div>
-                                    <span className="font-semibold text-[#EC1F25]">+S/ {item.selectedSpecialOption.price.toFixed(2)}</span>
-                                  </div>
-                                </div>
-                              )}
+                              <div className="space-y-3">
+                                {specialOptions.map((option, idx) => {
+                                  const totalPrice = (item.basePrice || item.price) + option.price;
+                                  const isSelected = item.selectedSpecialOption?.type === option.type;
 
-                              {isExpanded && (
-                                <div className="space-y-2">
-                                  {specialOptions.map((option, idx) => {
-                                    if (item.selectedSpecialOption?.type === option.type) return null;
-                                    
-                                    const totalPrice = (item.basePrice || item.price) + option.price;
-                                    return (
-                                      <button
-                                        key={idx}
-                                        onClick={() => handleSpecialOptionChange(uniqueId, option)}
-                                        className="w-full p-3 border-2 border-gray-200 rounded-lg hover:border-[#EC1F25] hover:bg-red-50 transition-all text-left"
-                                      >
-                                        <div className="flex justify-between items-center">
-                                          <div>
-                                            <span className="font-medium text-gray-900">{option.label}</span>
-                                            {option.description && (
-                                              <span className="text-xs text-gray-500 ml-2">({option.description})</span>
+                                  return (
+                                    <button
+                                      key={idx}
+                                      onClick={() => handleSpecialOptionChange(uniqueId, option)}
+                                      className={`w-full p-4 border-2 rounded-xl transition-all text-left ${
+                                        isSelected
+                                          ? 'border-[#EC1F25] bg-red-50 ring-2 ring-[#EC1F25] ring-opacity-20'
+                                          : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-3">
+                                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                            isSelected
+                                              ? 'border-[#EC1F25] bg-[#EC1F25]'
+                                              : 'border-gray-300'
+                                          }`}>
+                                            {isSelected && (
+                                              <span className="text-white text-xs">✓</span>
                                             )}
                                           </div>
-                                          <div className="text-right">
-                                            <span className="font-bold text-[#EC1F25]">+S/ {option.price.toFixed(2)}</span>
-                                            <div className="text-xs text-gray-500">Total: S/ {totalPrice.toFixed(2)}</div>
+                                          <div>
+                                            <span className={`font-medium ${
+                                              isSelected ? 'text-[#EC1F25]' : 'text-gray-900'
+                                            }`}>
+                                              {option.label}
+                                            </span>
+                                            {option.description && (
+                                              <span className="text-xs text-gray-500 ml-2">
+                                                ({option.description})
+                                              </span>
+                                            )}
                                           </div>
                                         </div>
-                                      </button>
-                                    );
-                                  })}
-                                </div>
+                                        <div className="text-right">
+                                          <span className="font-bold text-[#EC1F25]">
+                                            +S/ {option.price.toFixed(2)}
+                                          </span>
+                                          <div className="text-xs text-gray-500">
+                                            Total: S/ {totalPrice.toFixed(2)}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+
+                              {!item.selectedSpecialOption && (
+                                <p className="mt-3 text-xs text-red-600 flex items-center gap-1">
+                                  <span>⚠️</span>
+                                  Debes seleccionar una opción para continuar
+                                </p>
                               )}
                             </div>
                           )}
@@ -603,7 +627,7 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 </button>
-                
+
                 <button
                   onClick={() => setOrderType('delivery')}
                   className={`p-4 border-2 rounded-xl text-left transition-all ${
@@ -690,7 +714,7 @@ export default function CheckoutPage() {
                         <span className="font-medium">S/ {totals.sopaSurcharge.toFixed(2)}</span>
                       </div>
                     )}
-                    
+
                     {totals.menuSurcharge > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-600">🍱 Recargo menús</span>

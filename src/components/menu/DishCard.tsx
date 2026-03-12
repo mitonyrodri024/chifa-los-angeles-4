@@ -104,6 +104,7 @@ export default function DishCard({
     }
   };
 
+  // 🔥 FUNCIÓN CORREGIDA - AGREGAR categoryId Y basePrice
   const addToCartNormal = () => {
     if (!dish.isAvailable) return;
 
@@ -124,9 +125,10 @@ export default function DishCard({
         dishId: dish.id,
         dishName: dish.name,
         price: dish.price,
+        basePrice: dish.price,           // 👈 AGREGADO: guardar precio base
         quantity: 1,
         image: dish.image || '/placeholder.jpg',
-        categoryId: dish.categoryId,
+        categoryId: dish.categoryId,      // 👈 AGREGADO
         categoryName: dish.categoryName,
         description: dish.description,
         preparationTime: dish.preparationTime,
@@ -222,7 +224,6 @@ export default function DishCard({
           )}
         </div>
 
-        {/* 🔥 NOMBRE CORREGIDO - SIN line-clamp */}
         <h3 className="text-lg font-bold text-gray-900 mb-2 break-words">
           {dish.name}
         </h3>
