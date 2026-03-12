@@ -328,7 +328,7 @@ export default function CheckoutPage() {
         `🍜 *NUEVO PEDIDO - Chifa Los Angeles*`,
         `─────────────────────`,
         `👤 *Cliente:* ${user.displayName || 'Cliente'}`,
-        `📧 *Email:* ${user.email}`,
+  
         `─────────────────────`,
         `🛒 *Pedido:*`,
         itemsText,
@@ -763,7 +763,6 @@ export default function CheckoutPage() {
                     {user ? (
                       <>
                         <div className="font-bold text-gray-900">{user.displayName || 'Usuario'}</div>
-                        <div className="text-sm text-gray-600">{user.email || ''}</div>
                       </>
                     ) : (
                       <p className="text-gray-600 font-medium">No has iniciado sesión</p>
