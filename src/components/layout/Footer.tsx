@@ -1,6 +1,6 @@
 'use client';
 
-import { Phone, MapPin, Clock, Facebook, Instagram, Twitter, MessageCircle, ShoppingCart } from 'lucide-react';
+import { Phone, MapPin, Clock, Facebook, Instagram, Youtube, Music2, ShoppingCart } from 'lucide-react';
 import Image from 'next/image';
 
 export default function Footer() {
@@ -103,37 +103,52 @@ export default function Footer() {
                                     Mantente al día con nuestras ofertas y nuevos platos
                                 </p>
 
-                                {/* Redes sociales */}
+                                {/* Redes sociales con colores reales */}
                                 <div className="flex gap-4">
+                                    {/* Facebook */}
                                     <a
                                         href="https://www.facebook.com/Chifalosangeles4"
-                                        className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#EC1F25] hover:scale-110 transition-all duration-300 group"
-                                        aria-label="Facebook"
-                                    >
-                                        <Facebook className="w-6 h-6 text-white group-hover:text-white" />
-                                    </a>
-                                    <a
-                                        href="#"
-                                        className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#EC1F25] hover:scale-110 transition-all duration-300 group"
-                                        aria-label="Instagram"
-                                    >
-                                        <Instagram className="w-6 h-6 text-white group-hover:text-white" />
-                                    </a>
-                                    <a
-                                        href="#"
-                                        className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#EC1F25] hover:scale-110 transition-all duration-300 group"
-                                        aria-label="Twitter"
-                                    >
-                                        <Twitter className="w-6 h-6 text-white group-hover:text-white" />
-                                    </a>
-                                    <a
-                                        href="https://wa.me/51963753366"
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#25D366] hover:scale-110 transition-all duration-300 group"
-                                        aria-label="WhatsApp"
+                                        className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#1877F2] hover:scale-110 transition-all duration-300 group"
+                                        aria-label="Facebook"
                                     >
-                                        <MessageCircle className="w-6 h-6 text-white group-hover:text-white" />
+                                        <Facebook className="w-6 h-6 text-white" />
+                                    </a>
+
+                                    {/* Instagram */}
+                                    <a
+                                        href="https://www.instagram.com/chifalosangeles4/"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-gradient-to-r hover:from-[#833AB4] hover:via-[#FD1D1D] hover:to-[#F77737] hover:scale-110 transition-all duration-300 group"
+                                        aria-label="Instagram"
+                                    >
+                                        <Instagram className="w-6 h-6 text-white" />
+                                    </a>
+
+                                    {/* YouTube */}
+                                    <a
+                                        href="https://www.youtube.com/@chifa-los-angeles-4"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-[#FF0000] hover:scale-110 transition-all duration-300 group"
+                                        aria-label="YouTube"
+                                    >
+                                        <Youtube className="w-6 h-6 text-white" />
+                                    </a>
+
+                                    {/* TikTok */}
+                                    <a
+                                        href="https://www.tiktok.com/@chifalosangeles4"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-12 h-12 bg-[#2A2B2E] rounded-full flex items-center justify-center hover:bg-black hover:scale-110 transition-all duration-300 group relative overflow-hidden"
+                                        aria-label="TikTok"
+                                    >
+                                        <Music2 className="w-6 h-6 text-white relative z-10" />
+                                        {/* Efecto de gradiente de TikTok */}
+                                        <div className="absolute inset-0 opacity-0 hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r from-[#25F4EE] via-[#FE2C55] to-[#FE2C55]"></div>
                                     </a>
                                 </div>
 
@@ -200,8 +215,6 @@ export default function Footer() {
                     </div>
                 </div>
             </div>
-
-            
         </footer>
     );
 }
