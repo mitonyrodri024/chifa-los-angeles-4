@@ -62,7 +62,7 @@ export default function Footer() {
                                             href="tel:+51963753366"
                                             className="text-lg font-bold hover:text-[#FFF100] transition-colors duration-300"
                                         >
-                                            +51 963 753 366
+                                            +51 976 039 735
                                         </a>
                                         <p className="text-sm text-gray-400">Delivery disponible</p>
                                     </div>

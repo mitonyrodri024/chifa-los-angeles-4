@@ -116,17 +116,7 @@ export default function HomePage() {
 
               {/* Grid de teléfonos y dirección */}
               <div className="grid md:grid-cols-3 gap-6">
-                
-                {/* Teléfono 1 */}
-                <div className="bg-white/5 rounded-xl p-6 text-center hover:bg-white/10 transition-all group border border-white/10 hover:border-yellow-400/50">
-                  <div className="bg-yellow-400/20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-                    <Phone className="w-8 h-8 text-yellow-400" />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-2xl font-bold text-yellow-400">963 753 366</p>
-                    <p className="text-sm text-white/70">Pedidos y delivery</p>
-                  </div>
-                </div>
+                              
 
                 {/* Teléfono 2 */}
                 <div className="bg-white/5 rounded-xl p-6 text-center hover:bg-white/10 transition-all group border border-white/10 hover:border-yellow-400/50">
