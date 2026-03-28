@@ -36,7 +36,7 @@ export default function HomePage() {
                 src="/logo/logo.png"
                 alt="Logo"
                 className="w-28 h-28 md:w-32 md:h-32 object-contain"
-              />              
+              />
             </div>
           </div>
 
@@ -51,8 +51,29 @@ export default function HomePage() {
               <span>VER MENÚ COMPLETO</span>
               <ArrowRight className="w-6 h-6 md:w-8 md:h-8 group-hover:translate-x-2 transition-transform" />
             </button>
-            
-            
+
+            <button
+              onClick={() => {
+                const destino = "-7.15480,-78.50745";
+
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition((pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+
+                    const url = `https://www.google.com/maps/dir/${lat},${lng}/${destino}`;
+                    window.open(url, "_blank");
+                  });
+                } else {
+                  alert("Tu navegador no soporta ubicación");
+                }
+              }}
+              className="px-5 py-3 bg-yellow-400 text-red-700 font-bold rounded-lg mt-5 hover:bg-yellow-500 transition cursor-pointer"
+            >
+              📍 Cómo llegar
+            </button>
+
+
           </div>
 
           {/* Texto de Nuestra Historia */}
@@ -102,21 +123,21 @@ export default function HomePage() {
 
             {/* SECCIÓN DE CONTACTO - Teléfonos y dirección */}
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-8 mt-8 border-2 border-yellow-400/30">
-              
+
               {/* Título de la sección */}
               <h2 className="text-3xl font-bold text-center mb-6 text-yellow-300">
                 Contáctanos
               </h2>
-              
+
               {/* Descripción */}
               <p className="text-center text-white/90 text-lg mb-8 max-w-2xl mx-auto">
-                Estamos ubicados en Cajamarca con 4 locales a tu disposición. 
+                Estamos ubicados en Cajamarca con 4 locales a tu disposición.
                 Realiza tus pedidos o consultas a nuestros números:
               </p>
 
               {/* Grid de teléfonos y dirección */}
               <div className="grid md:grid-cols-3 gap-6">
-                              
+
 
                 {/* Teléfono 2 */}
                 <div className="bg-white/5 rounded-xl p-6 text-center hover:bg-white/10 transition-all group border border-white/10 hover:border-yellow-400/50">
@@ -137,7 +158,7 @@ export default function HomePage() {
                   <div className="space-y-2">
                     <p className="text-xl font-bold text-white">Jr. Ayacucho 1478</p>
                     <p className="text-sm text-white/70">Cajamarca - Perú</p>
-                    
+
                   </div>
                 </div>
               </div>
